@@ -3,13 +3,13 @@
 
 import os, re, struct
 from ctypes import cdll, byref, c_void_p, c_char_p, c_int, create_string_buffer
-from Pyxsim.xe import Xe
-from Pyxsim.testers import TestError
+from pyxsim.xe import Xe
+from pyxsim.testers import TestError
 import threading
 import traceback
-import Pyxsim
+import pyxsim
 import sys
-from Pyxsim.xmostest_subprocess import platform_is_windows
+from pyxsim.xmostest_subprocess import platform_is_windows
 
 ALL_BITS = 0xFFFFFF
 
