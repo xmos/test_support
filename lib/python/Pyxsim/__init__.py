@@ -1,13 +1,13 @@
 # Copyright 2016-2021 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 """
-pyxsim pytest framework
+Pyxsim pytest framework
 
 This module provides functions to run tests for XMOS applications and libraries.
 """
 import sys
-import pyxsim.pyxsim
-from pyxsim.xmostest_subprocess import call_get_output
+import Pyxsim.pyxsim
+from Pyxsim.xmostest_subprocess import call_get_output
 import platform
 import multiprocessing
 import tempfile

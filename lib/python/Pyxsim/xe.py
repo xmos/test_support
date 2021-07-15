@@ -1,7 +1,7 @@
 # Copyright 2016-2021 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
-from pyxsim.xmostest_subprocess import call, call_get_output
-from pyxsim.testers import TestError
+from Pyxsim.xmostest_subprocess import call, call_get_output
+from Pyxsim.testers import TestError
 import os, tempfile
 from xml.dom.minidom import parse
 import re

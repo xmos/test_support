@@ -10,7 +10,7 @@ import time
 import os
 import signal
 import errno
-from pyxsim.testers import TestError
+from Pyxsim.testers import TestError
 
 
 def pstreekill(process):
