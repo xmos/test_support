@@ -3,21 +3,24 @@
 """
 Pyxsim pytest framework
 
-This module provides functions to run tests for XMOS applications and libraries.
+This module provides functions to run tests for XMOS applications and
+libraries.
 """
-import sys
-import Pyxsim.pyxsim
-from Pyxsim.xmostest_subprocess import call_get_output
-import platform
 import multiprocessing
-import tempfile
-import re
 import os
+import re
+import sys
+
+from Pyxsim.xmostest_subprocess import call_get_output
+from . import pyxsim
 
 clean_only = False
 
+
 # This function is called automatically by the runners
-def _build(xe_path, build_config=None, env={}, do_clean=False, build_options=[]):
+def _build(
+    xe_path, build_config=None, env={}, do_clean=False, build_options=[]
+):
 
     # Work out the Makefile path
     path = None
@@ -46,7 +49,9 @@ def _build(xe_path, build_config=None, env={}, do_clean=False, build_options=[])
         cmd = ["xmake", "all"]
 
     if do_clean:
-        clean_output = call_get_output(["xmake", "clean"], cwd=path, env=my_env)
+        call_get_output(
+            ["xmake", "clean"], cwd=path, env=my_env
+        )
 
     if build_config is not None:
         cmd += ["CONFIG=%s" % build_config]
@@ -57,18 +62,17 @@ def _build(xe_path, build_config=None, env={}, do_clean=False, build_options=[])
 
     success = True
     for x in output:
-        s = str(x)
+        s = str(x, "utf8")
         if s.find("Error") != -1:
             success = False
-        # if re.match('xmake: \*\*\* .* Stop.', x) != None:
-        if re.match(r"xmake: \*\*\* .* Stop.", s) != None:
+        if re.match(r"xmake: \*\*\* .* Stop.", s) is not None:
             success = False
 
     if not success:
         sys.stderr.write("ERROR: build failed.\n")
         for x in output:
-            s = str(x)
-            sys.stderr.write(s + "\n")
+            s = str(x, "utf8")
+            sys.stderr.write(s)
 
     return (success, output)
 
@@ -84,16 +88,9 @@ def do_run_pyxsim(xe, simargs, appargs, simthreads):
 def run_with_pyxsim(
     xe,
     simthreads,
-    xscope_io=False,
-    loopback=[],
     simargs=[],
     appargs=[],
-    suppress_multidrive_messages=False,
-    tester=None,
     timeout=600,
-    initial_delay=None,
-    start_after_started=[],
-    start_after_completed=[],
 ):
 
     p = multiprocessing.Process(
@@ -104,7 +101,6 @@ def run_with_pyxsim(
     if p.is_alive():
         sys.stderr.write("Simulator timed out\n")
         p.terminate()
-    return None
 
 
 def run_tester(caps, tester_list):
@@ -118,7 +114,7 @@ def run_tester(caps, tester_list):
     return result
 
 
-class SimThread(object):
+class SimThread():
     def run(self, xsi):
         pass
 
