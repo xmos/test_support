@@ -62,7 +62,7 @@ def _build(
 
     success = True
     for x in output:
-        s = str(x)
+        s = str(x, "utf8")
         if s.find("Error") != -1:
             success = False
         if re.match(r"xmake: \*\*\* .* Stop.", s) is not None:
@@ -71,8 +71,8 @@ def _build(
     if not success:
         sys.stderr.write("ERROR: build failed.\n")
         for x in output:
-            s = str(x)
-            sys.stderr.write(s + "\n")
+            s = str(x, "utf8")
+            sys.stderr.write(s)
 
     return (success, output)
 
