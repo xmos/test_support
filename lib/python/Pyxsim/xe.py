@@ -68,7 +68,7 @@ class Xe:
         current_tile = None
         symtab = {}
         for line in stdout:
-            #line = str(line)
+            line = str(line, "utf8")
             if line == "":
                 break
             m = re.match(
