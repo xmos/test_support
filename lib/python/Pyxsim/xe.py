@@ -69,12 +69,9 @@ class Xe:
         symtab = {}
         for line in stdout:
             line = str(line, "utf8")
-            if line == "":
-                break
             m = re.match(
                 r"Loadable.*for (.*) \(node \"(\d*)\", tile (\d*)", line
             )
-
             if m:
                 current_tile = m.groups(0)[0]
             m = re.match(
