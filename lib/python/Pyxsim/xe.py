@@ -68,13 +68,10 @@ class Xe:
         current_tile = None
         symtab = {}
         for line in stdout:
-            #line = str(line)
-            if line == "":
-                break
+            line = str(line, "utf8")
             m = re.match(
                 r"Loadable.*for (.*) \(node \"(\d*)\", tile (\d*)", line
             )
-
             if m:
                 current_tile = m.groups(0)[0]
             m = re.match(
