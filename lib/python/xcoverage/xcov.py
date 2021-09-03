@@ -7,7 +7,9 @@ import argparse
 import datetime
 import xml.etree.ElementTree as ET
 
-LOADABLE_RE = re.compile("Loadable ([0-9]*).*tile\[([0-9]*)\] \(node \"([0-9]*)\", tile ([0-9]*)")
+LOADABLE_RE = re.compile(
+    'Loadable ([0-9]*).*tile\[([0-9]*)\] \(node "([0-9]*)", tile ([0-9]*)'
+)
 DISASM_RE = re.compile(".*0x([0-9a-fA-F]*): .*: \s*(\w*) \(.*")
 TRACE_RE = re.compile("tile\[([0-9]*)\]@([0-9]).*--.-\.*([0-9a-fA-F]*) \((.*)\) : (.*)")
 XADDR_RE = re.compile("(.*) at (.*)")
@@ -25,6 +27,8 @@ disasm_core = None
 def create_folder(folder):
     if not os.path.exists(folder):
         os.makedirs(folder)
+
+
 # This is to read the config.xml produced by xobjdump as the naming of the elf files does not use the
 # same node numbers are in the disassembly! The source code describes the node used in the file name as:
 # "<node> refers to this node's jtag chain index"
@@ -32,21 +36,23 @@ def init_elf_mapping(xcov_filename):
     # global tile2node
 
     def get_jtag_node(node):
-        for proc in node.iter('Processor'):
-            return re.split("\[|\]", proc.attrib['codeReference'])[1]
-    config_xml = f"{xcov_filename}/config.xml" 
+        for proc in node.iter("Processor"):
+            return re.split("\[|\]", proc.attrib["codeReference"])[1]
+
+    config_xml = f"{xcov_filename}/config.xml"
     tree = ET.parse(config_xml)
     root = tree.getroot()
     nodes = {}
     node_jtag_id = []
-    for node in root.iter('Node'):
-        if 'number' in node.attrib:
-            nodes[get_jtag_node(node)] = node.attrib['number']
-        if 'id' in node.attrib:
-            node_jtag_id.append(node.attrib['id'])
+    for node in root.iter("Node"):
+        if "number" in node.attrib:
+            nodes[get_jtag_node(node)] = node.attrib["number"]
+        if "id" in node.attrib:
+            node_jtag_id.append(node.attrib["id"])
 
     for (node, id) in nodes.items():
         node2jtag_node[node] = node_jtag_id.index(id)
+
 
 # For each node/core combination there could be two elf files. If there are two then they will be named
 # e.g. image_n1c0.elf and image_n1c0_2.elf, and the first file will contain the jtag boot code.
@@ -54,6 +60,7 @@ def init_elf_mapping(xcov_filename):
 # In this dict the keywords are node:core where node is the numbering taken from the disassembly file
 # NOT the jtag chain index. These therefore need translating before they can be used to look up the name of
 # the elf file!
+
 
 def normalize_location(location):
     result = XADDR_RE.match(location)
@@ -75,19 +82,20 @@ def normalize_location(location):
 
     return fn, fileline
 
+
 # Use xaddr2line to map the memory addresses to source line numbers
 def init_addr2line(coverage_files, coverage_lines, xcov_filename):
     def update_coverage(addrs, fileline, coverage_lines, asm, fn):
-        xaddress = {addrs : [0, asm, fn]}
+        xaddress = {addrs: [0, asm, fn]}
         if fileline not in coverage_lines:
             coverage_lines[fileline] = {}
-            coverage_lines[fileline]['src_hits'] = 0
-            coverage_lines[fileline]['asm_hits'] = 0
-            coverage_lines[fileline]['asm_addr'] = xaddress
-            coverage_lines[fileline]['asm_count'] = 1
+            coverage_lines[fileline]["src_hits"] = 0
+            coverage_lines[fileline]["asm_hits"] = 0
+            coverage_lines[fileline]["asm_addr"] = xaddress
+            coverage_lines[fileline]["asm_count"] = 1
         else:
-            coverage_lines[fileline]['asm_addr'].update(xaddress)
-            coverage_lines[fileline]['asm_count'] += 1
+            coverage_lines[fileline]["asm_addr"].update(xaddress)
+            coverage_lines[fileline]["asm_count"] += 1
 
     def init_coverage(addrs, fileline, asm, fn):
         if not fileline:
@@ -106,7 +114,7 @@ def init_addr2line(coverage_files, coverage_lines, xcov_filename):
     for tile in addrs_in_tile.keys():
         addrs = addrs_in_tile[tile]["addr"]
         asm = addrs_in_tile[tile]["asm"]
-        assert(tile not in addr2line_in_tile)
+        assert tile not in addr2line_in_tile
         addr2line_in_tile[tile] = {}
         while len(addrs) != 0:
             (node, core) = tile2elf_id[tile].split(":")
@@ -117,7 +125,9 @@ def init_addr2line(coverage_files, coverage_lines, xcov_filename):
             if not os.path.isfile(elf):
                 elf = "%s/%s.elf" % (xcov_filename, elf_prefix)
                 if not os.path.isfile(elf):
-                    print("Error: Cannot find elf file for node %s core %s" % (node, core))
+                    print(
+                        "Error: Cannot find elf file for node %s core %s" % (node, core)
+                    )
                     sys.exit(1)
             cmd = "xaddr2line -p -f -e %s" % elf
             addrs_subset = []
@@ -125,18 +135,21 @@ def init_addr2line(coverage_files, coverage_lines, xcov_filename):
             while len(cmd) < (arg_max / 2) and len(addrs) != 0:
                 addrs_subset.append(addrs.pop())
                 asm_subset.append(asm.pop())
-                cmd += ' 0x%s' % addrs_subset[-1]
+                cmd += " 0x%s" % addrs_subset[-1]
             results = subprocess.check_output(cmd.split())
-            results = results.decode('utf-8')   
+            results = results.decode("utf-8")
             results = results.split("\n")[:-1]
             if len(addrs_subset) != len(results):
-                print("Error len addrs %d results %d" % (len(addrs_subset), len(results)))
+                print(
+                    "Error len addrs %d results %d" % (len(addrs_subset), len(results))
+                )
             locations = [normalize_location(location) for location in results]
             locations = list(zip(locations, asm_subset))
             addr2line_in_tile[tile].update(dict(zip(addrs_subset, locations)))
 
         for addrs, location in addr2line_in_tile[tile].items():
             init_coverage(addrs, location[0][1], location[1], location[0][0])
+
 
 def parse_disasm(line):
     def add_addr(tile, addr, asm):
@@ -157,7 +170,7 @@ def parse_disasm(line):
     if result:
         addr = result.group(1)
         asm = result.group(2)
-        assert(disasm_tile != None)
+        assert disasm_tile != None
         add_addr(disasm_tile, addr, asm)
     else:
         result = LOADABLE_RE.match(line)
@@ -165,42 +178,45 @@ def parse_disasm(line):
             (disasm_loadable, disasm_tile, disasm_node, disasm_core) = result.groups()
             elf_id = ":".join([disasm_node, disasm_core])
             if disasm_tile in tile2elf_id:
-                assert(tile2elf_id[disasm_tile] == elf_id)
+                assert tile2elf_id[disasm_tile] == elf_id
             else:
                 tile2elf_id[disasm_tile] = elf_id
+
 
 def parse_trace(tracefile, coverage_lines):
     def addr2line(tile, addr):
         if addr in addr2line_in_tile[tile]:
             return addr2line_in_tile[tile][addr][0][1]
-        if not addr.startswith('fff'):
+        if not addr.startswith("fff"):
             print("addr2line failure:tile %s addr %s" % (tile, addr))
         return "UNKNOWN:?"
 
     def has_src_line_changed(tile, thread, fileline, covstate):
         if (tile, thread) not in covstate:
-            covstate[(tile, thread)] = {'srcline': fileline, 'linecount': 1}
+            covstate[(tile, thread)] = {"srcline": fileline, "linecount": 1}
             return True
 
-        has_changed = ((covstate[(tile, thread)]['srcline'] != fileline) or
-                       (covstate[(tile, thread)]['linecount'] == coverage_lines[fileline]['asm_count']))
+        has_changed = (covstate[(tile, thread)]["srcline"] != fileline) or (
+            covstate[(tile, thread)]["linecount"]
+            == coverage_lines[fileline]["asm_count"]
+        )
         if has_changed:
-            covstate[(tile, thread)]['srcline'] = fileline
-            covstate[(tile, thread)]['linecount'] = 1
+            covstate[(tile, thread)]["srcline"] = fileline
+            covstate[(tile, thread)]["linecount"] = 1
         else:
-            covstate[(tile, thread)]['linecount'] += 1
+            covstate[(tile, thread)]["linecount"] += 1
         return has_changed
 
     def add_to_trace(tile, thread, addr, fn, asm, covstate):
-        id = ':'.join([tile, addr])
+        id = ":".join([tile, addr])
         if id not in trace_cache:
             trace_cache[id] = [fn, asm, addr2line(tile, addr)]
         fileline = trace_cache[id][2]
         if fileline in coverage_lines:
             if fileline:
-                coverage_lines[fileline]['asm_hits'] += 1
-                if addr in coverage_lines[fileline]['asm_addr'].keys():
-                    coverage_lines[fileline]['asm_addr'][addr][0] += 1
+                coverage_lines[fileline]["asm_hits"] += 1
+                if addr in coverage_lines[fileline]["asm_addr"].keys():
+                    coverage_lines[fileline]["asm_addr"][addr][0] += 1
 
     def find_par(codeline, addrs_list):
         merge_list = [[]]
@@ -208,13 +224,13 @@ def parse_trace(tracefile, coverage_lines):
         par = False
         merge_list[grp] = addrs_list[0]
         for i, addrss in enumerate(addrs_list):
-            if addrs_list[grp][-1][1][1] != 'dualentsp':
-                if i != (len(addrs_list)-1):
-                    merge_list[grp] += addrs_list[i+1]
+            if addrs_list[grp][-1][1][1] != "dualentsp":
+                if i != (len(addrs_list) - 1):
+                    merge_list[grp] += addrs_list[i + 1]
             else:
-                if i != (len(addrs_list)-1):
+                if i != (len(addrs_list) - 1):
                     par = True
-                    merge_list.append(addrs_list[i+1])
+                    merge_list.append(addrs_list[i + 1])
                     grp += 1
                 if par:
                     par_fn.append([addrs_list[i][-1][1][2], codeline])
@@ -229,7 +245,9 @@ def parse_trace(tracefile, coverage_lines):
             if not (addrs_list[0]):
                 addrs_list[grp].append(ad_ct)
             else:
-                if ((int(addrs_list[grp][-1][0], 16) + 2) == int(addrs, 16)) or ((int(addrs_list[grp][-1][0], 16) + 4) == int(addrs, 16)):
+                if ((int(addrs_list[grp][-1][0], 16) + 2) == int(addrs, 16)) or (
+                    (int(addrs_list[grp][-1][0], 16) + 4) == int(addrs, 16)
+                ):
                     addrs_list[grp].append(ad_ct)
                 else:
                     addrs_list.append([ad_ct])
@@ -241,7 +259,7 @@ def parse_trace(tracefile, coverage_lines):
         for i, addrss in enumerate(addrs_list):
             asm_hits = []
             for addrs, ctandasm in addrss:
-                asm_hits.append(coverage_lines[codeline]['asm_addr'][addrs][0])
+                asm_hits.append(coverage_lines[codeline]["asm_addr"][addrs][0])
             max_hits = max(asm_hits)
             coverage_lines[codeline]["src_hits"] += max_hits
 
@@ -265,7 +283,7 @@ def parse_trace(tracefile, coverage_lines):
             line = tracefd.readline()
             lineno += 1
         for keys, value in coverage_lines.items():
-            asm_addrs_items = coverage_lines[keys]['asm_addr'].items()
+            asm_addrs_items = coverage_lines[keys]["asm_addr"].items()
             sorted_items = sorted(asm_addrs_items)
             # print(keys, sorted_items)
             anal_src_addrs(keys, sorted_items)
@@ -275,7 +293,7 @@ def parse_trace(tracefile, coverage_lines):
         for keys, value in coverage_lines.items():
             for i, vi in enumerate(par_fn):
                 if keys not in vi[1]:
-                    asm_addrs_items = coverage_lines[keys]['asm_addr'].items()
+                    asm_addrs_items = coverage_lines[keys]["asm_addr"].items()
                     sorted_items = sorted(asm_addrs_items)
                     for i, v in enumerate(sorted_items):
                         for thread_name in par_fn_thread:
@@ -284,7 +302,8 @@ def parse_trace(tracefile, coverage_lines):
                                     par_location.add(keys)
                                     anal_src_addrs(keys, sorted_items, False)
                                 break
-                    break    
+                    break
+
 
 # Assumes that source lines are of the form "path_to_file:line_number"
 def line_key(line):
@@ -293,7 +312,8 @@ def line_key(line):
     except:
         return 0
 
-def handler_process(disasm,trace,xcov_filename):
+
+def handler_process(disasm, trace, xcov_filename):
 
     global node2jtag_node
     global addrs_in_tile
@@ -318,7 +338,7 @@ def handler_process(disasm,trace,xcov_filename):
     if not coverage_files:
         print("Generating coverage for all source files")
 
-    covdir = os.path.join(xcov_filename,"xcov")
+    covdir = os.path.join(xcov_filename, "xcov")
     create_folder(covdir)
 
     init_elf_mapping(xcov_filename)
@@ -362,33 +382,38 @@ def handler_process(disasm,trace,xcov_filename):
     total_src = 0
     for file in coverage_files:
         file = str(file)
-        covfile = ("%s/%s.xcov" % (covdir,file.replace("/", "__")))
+        covfile = "%s/%s.xcov" % (covdir, file.replace("/", "__"))
         covoutfd = open(covfile, "w")
         nocov = 0
         for codeline in sorted(coverage[file], key=line_key):
-            if coverage_lines[codeline]['src_hits'] == 0:
+            if coverage_lines[codeline]["src_hits"] == 0:
                 nocov += 1
-            covoutfd.write("%s:%s:%s:%s\n" % (codeline.split(":")[1],
-                                              coverage_lines[codeline]['src_hits'],
-                                              coverage_lines[codeline]['asm_hits'],
-                                              coverage_lines[codeline]['asm_count']))
-        coverage_rate = float(100 * (len(coverage[file])-nocov)/len(coverage[file]))
-        total_src_covered +=  len(coverage[file])-nocov
+            covoutfd.write(
+                "%s:%s:%s:%s\n"
+                % (
+                    codeline.split(":")[1],
+                    coverage_lines[codeline]["src_hits"],
+                    coverage_lines[codeline]["asm_hits"],
+                    coverage_lines[codeline]["asm_count"],
+                )
+            )
+        coverage_rate = float(100 * (len(coverage[file]) - nocov) / len(coverage[file]))
+        total_src_covered += len(coverage[file]) - nocov
         total_src += len(coverage[file])
         print("%s: %f%% covered" % (file, coverage_rate))
-    total_coverage = float(100 * (total_src_covered/total_src))
+    total_coverage = float(100 * (total_src_covered / total_src))
     print("Total coverage: %f%% covered" % total_coverage)
     return total_coverage
 
-def handler_combine(xcov_dir):
 
+def handler_combine(xcov_dir):
     def get_result_files(xcov_dir):
         files = []
         # for dir in dirs:
-        xdir = os.path.join(xcov_dir,"xcov")
+        xdir = os.path.join(xcov_dir, "xcov")
         for file in os.listdir(xdir):
-            if file.endswith('.xcov'):
-                files.append(os.path.join(xdir,file))
+            if file.endswith(".xcov"):
+                files.append(os.path.join(xdir, file))
         return files
 
     def file2covfile(file):
@@ -407,7 +432,7 @@ def handler_combine(xcov_dir):
         for file in files:
             filename = file2covfile(file)
             print("Processing %s" % file)
-            with open(file, 'r') as fd:
+            with open(file, "r") as fd:
                 for line in fd:
                     (lineno, src_hits, asm_hits, asm_count) = line.split(":")
                     try:
@@ -423,30 +448,32 @@ def handler_combine(xcov_dir):
                     asm_count = int(asm_count)
                     if lineno not in coverage[filename]:
                         coverage[filename][lineno] = {}
-                        coverage[filename][lineno]['src_hits'] = 0
-                        coverage[filename][lineno]['asm_hits'] = 0
-                        coverage[filename][lineno]['asm_count_max'] = asm_count
-                        coverage[filename][lineno]['asm_count_min'] = asm_count
+                        coverage[filename][lineno]["src_hits"] = 0
+                        coverage[filename][lineno]["asm_hits"] = 0
+                        coverage[filename][lineno]["asm_count_max"] = asm_count
+                        coverage[filename][lineno]["asm_count_min"] = asm_count
                     # The asm count for a given source line may be different between executables
-                    if asm_count < coverage[filename][lineno]['asm_count_min']:
-                        coverage[filename][lineno]['asm_count_min'] = asm_count
-                    if asm_count > coverage[filename][lineno]['asm_count_max']:
-                        coverage[filename][lineno]['asm_count_max'] = asm_count
-                    coverage[filename][lineno]['src_hits'] += src_hits
-                    coverage[filename][lineno]['asm_hits'] += asm_hits
+                    if asm_count < coverage[filename][lineno]["asm_count_min"]:
+                        coverage[filename][lineno]["asm_count_min"] = asm_count
+                    if asm_count > coverage[filename][lineno]["asm_count_max"]:
+                        coverage[filename][lineno]["asm_count_max"] = asm_count
+                    coverage[filename][lineno]["src_hits"] += src_hits
+                    coverage[filename][lineno]["asm_hits"] += asm_hits
 
     def generate_coverage(logs_path, coverage):
         for (file, counts) in coverage.items():
-            annotated = "%s/%s.coverage" % (logs_path,file.replace("/", "__"))
-            with open(annotated, 'w') as outfd:
-                with open(file, 'r') as srcfd:
+            annotated = "%s/%s.coverage" % (logs_path, file.replace("/", "__"))
+            with open(annotated, "w") as outfd:
+                with open(file, "r") as srcfd:
                     lineno = 1
                     for line in srcfd:
                         if lineno in counts:
-                            prefix = "%s%s%s%s" % ("{:5d} ".format(counts[lineno]['src_hits']),
-                                                   "{:5d} ".format(counts[lineno]['asm_hits']),
-                                                   "{:3d} ".format(counts[lineno]['asm_count_max']),
-                                                   "{:3d} ".format(counts[lineno]['asm_count_min']))
+                            prefix = "%s%s%s%s" % (
+                                "{:5d} ".format(counts[lineno]["src_hits"]),
+                                "{:5d} ".format(counts[lineno]["asm_hits"]),
+                                "{:3d} ".format(counts[lineno]["asm_count_max"]),
+                                "{:3d} ".format(counts[lineno]["asm_count_min"]),
+                            )
                         else:
                             prefix = 20 * " "
                         outfd.write("%s: %s" % (prefix, line))
@@ -456,6 +483,6 @@ def handler_combine(xcov_dir):
     files = get_result_files(xcov_dir)
     coverage = init_coverage(files)
     combine_results(files, coverage)
-    logs_path = os.path.join(xcov_dir,"logs")
+    logs_path = os.path.join(xcov_dir, "logs")
     create_folder(logs_path)
-    generate_coverage(logs_path,coverage)
+    generate_coverage(logs_path, coverage)
