@@ -240,14 +240,10 @@ def parse_trace(tracefile, coverage_lines):
             coverage_lines[codeline]["src_hits"] = 0
         for i, addrss in enumerate(addrs_list):
             asm_hits = []
-            # print(i, addrss)
             for addrs, ctandasm in addrss:
                 asm_hits.append(coverage_lines[codeline]['asm_addr'][addrs][0])
-            # print(asm_hits)
             max_hits = max(asm_hits)
-            # print(max_hits)
             coverage_lines[codeline]["src_hits"] += max_hits
-        # print(coverage_lines[codeline]["src_hits"])
 
     # Keep a track of the current source line for each tile so we only increment coverage counts
     # when we move to a new source line. It also needs to keep a record of the number of cycles the
@@ -289,57 +285,6 @@ def parse_trace(tracefile, coverage_lines):
                                     anal_src_addrs(keys, sorted_items, False)
                                 break
                     break    
-            # for addrs, counts in sorted_items:
-            #     print (addrs, counts)
-# def build_system(covdir, binfile, xmake, clean, tracefile):
-#     print("Creating directory %s for running coverage" % covdir)
-#     if os.path.exists(covdir):
-#         shutil.rmtree(covdir)
-#     os.mkdir(covdir)
-#     script = "%s/build_and_run.sh" % covdir
-#     scriptfd = open(script, "w")
-#     scriptfd.write("#!/usr/bin/env bash\n")
-
-#     if (xmake):
-#         # Run xmake
-#         if (clean):
-#             scriptfd.write('echo "Cleaning build"\n')
-#             scriptfd.write("xmake clean > %s/xmake.log 2>&1\n" % covdir)
-#         else:
-#             scriptfd.write('echo "Not cleaning build"\n')
-
-#         scriptfd.write("xmake >> %s/xmake.log 2>&1\n" % covdir)
-
-#     # Run xobjdump to get elf
-#     scriptfd.write('echo "Generating elf"\n')
-#     scriptfd.write("xobjdump --split --split-dir %s %s > %s/xobjdump_split.log\n" % (covdir, binfile, covdir))
-
-#     # Run xobjdump to get diassembly
-#     scriptfd.write('echo "Generating disasm"\n')
-#     scriptfd.write("xobjdump -S %s -o %s/disasm.dump > %s/xobjdump_disasm.log\n" % (binfile, covdir, covdir))
-#     scriptfd.write("xobjdump -d %s -o %s/disasm_nosrc.dump >> %s/xobjdump_disasm.log\n" % (binfile, covdir, covdir))
-#     scriptfd.write("if diff %s/disasm.dump %s/disasm_nosrc.dump > /dev/null; then\n" % (covdir, covdir))
-#     scriptfd.write('  echo "Error: looks like -g was not used. This is required for coverage."\n')
-#     scriptfd.write("  exit 1\n")
-#     scriptfd.write("fi\n")
-
-#     # Run sim to get trace
-#     if (tracefile):
-#         scriptfd.write('echo "Using trace file %s"\n' % tracefile)
-#         scriptfd.write("cp %s %s/trace.dump\n" % (tracefile, covdir))
-#     else:
-#         scriptfd.write('echo "Running simulation"\n')
-#         scriptfd.write("xsim --trace-to %s/trace.dump %s > %s/xsim.log\n" % (covdir, binfile, covdir))
-
-#     scriptfd.close()
-#     os.chmod(script, 0755)
-
-#     try:
-#         subprocess.check_call(script.split())
-#     except:
-#         print("Error running build script")
-#         sys.exit(1)
-#     os.chdir(covdir)
 
 # Assumes that source lines are of the form "path_to_file:line_number"
 def line_key(line):
@@ -375,10 +320,6 @@ def handler_process(disasm,trace,xcov_filename):
 
     covdir = os.path.join(xcov_filename,"xcov")
     create_folder(covdir)
-    # covdir = "%s_%s" % ("xcovv",
-    #                     datetime.datetime.now().strftime('%Y-%m-%d-%H%M%S'))
-
-    # build_system(covdir, args.binary, args.xmake, args.clean, args.tracefile)
 
     init_elf_mapping(xcov_filename)
 
@@ -518,6 +459,3 @@ def handler_combine(xcov_dir):
     logs_path = os.path.join(xcov_dir,"logs")
     create_folder(logs_path)
     generate_coverage(logs_path,coverage)
-    
-# handler_process("disasm.dump","trace.dump","/home/kevin/sandboxes/lib_xud_DEV_XS3/lib_xud/tests/test_bulk_loopback/bin/xs3_600_4_1_0_FS")
-# handler_combine("logs")
