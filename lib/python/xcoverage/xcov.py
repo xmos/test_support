@@ -312,6 +312,14 @@ def line_key(line):
     except:
         return 0
 
+"""
+handler_process description:
+generating result (saved in xcov dir) for each coveraged src files
+
+@param disam: a path to disasm file
+@param trace: a path to trace file
+@param xcov_filename : a path where xcov directory located
+"""
 
 def handler_process(disasm, trace, xcov_filename):
 
@@ -405,6 +413,12 @@ def handler_process(disasm, trace, xcov_filename):
     print("Total coverage: %f%% covered" % total_coverage)
     return total_coverage
 
+"""
+handler_combine description:
+generating result (rtf file) for each coveraged src files
+
+@param xcov_dir: a path where xcov directory located
+"""
 
 def handler_combine(xcov_dir):
     def get_result_files(xcov_dir):
