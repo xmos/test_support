@@ -316,27 +316,29 @@ def line_key(line):
     except:
         return 0
 
+
 def escape_bracket(line):
     bracket_loc = []
     count = 0
     content = ""
     for i in line:
-        if i == '{' or i == '}':
+        if i == "{" or i == "}":
             bracket_loc.append(count)
         count += 1
     if len(bracket_loc):
         offset = 0
         for value in bracket_loc:
-            content = line[0:value+offset] + "\\" + line[value+offset:]
+            content = line[0 : value + offset] + "\\" + line[value + offset :]
             offset += 1
     else:
         content = line
     return content
 
+
 def write_rtf(rtf, lines, src_hits):
     GREEN = "\\cf3"
     BLACK = "\\cf4"
-    RED   = "\\cf2"
+    RED = "\\cf2"
     rline = escape_bracket(lines)
     if src_hits == -1:
         rtf.write("%s %s \\line" % (BLACK, rline))
@@ -344,6 +346,7 @@ def write_rtf(rtf, lines, src_hits):
         rtf.write("%s %s \\line" % (GREEN, rline))
     else:
         rtf.write("%s %s \\line" % (RED, rline))
+
 
 """
 handler_process description:
@@ -354,6 +357,7 @@ generating result (saved in xcov dir) for each coveraged src files
 @param xcov_filename : a path where xcov directory located
 @return total coverage
 """
+
 
 def handler_process(disasm, trace, xcov_filename):
 
@@ -447,6 +451,7 @@ def handler_process(disasm, trace, xcov_filename):
     print("Total coverage: %f%% covered" % total_coverage)
     return total_coverage
 
+
 """
 handler_combine description:
 generating result (rtf file) for each coveraged src files
@@ -454,6 +459,7 @@ generating result (rtf file) for each coveraged src files
 @param xcov_dir: a path where xcov directory located
 @output generates 2 files - the .coverage and .rtf file
 """
+
 
 def handler_combine(xcov_dir):
     def get_result_files(xcov_dir):
@@ -513,9 +519,11 @@ def handler_combine(xcov_dir):
         for (file, counts) in coverage.items():
             annotated = "%s/%s.coverage" % (logs_path, file.replace("/", "__"))
             rtf_name = "%s/%s.rtf" % (logs_path, file.replace("/", "__"))
-            rtf_f = open(rtf_name,'w')
+            rtf_f = open(rtf_name, "w")
             rtf_f.write(RTF_header)
-            rtf_f.write("\\fs25 Green -> included and executed | Red -> included but not executed | Black -> not included\\line")
+            rtf_f.write(
+                "\\fs25 Green -> included and executed | Red -> included but not executed | Black -> not included\\line"
+            )
             rtf_f.write("\\line")
             with open(annotated, "w") as outfd:
                 with open(file, "r") as srcfd:
@@ -528,12 +536,18 @@ def handler_combine(xcov_dir):
                                 "{:3d} ".format(counts[lineno]["asm_count_max"]),
                                 "{:3d} ".format(counts[lineno]["asm_count_min"]),
                             )
-                            rtf_prefix = "%s" % ("{:5d} ".format(counts[lineno]["src_hits"]))
-                            write_rtf(rtf_f,"%s: %s" % (rtf_prefix, line),counts[lineno]["src_hits"])
+                            rtf_prefix = "%s" % (
+                                "{:5d} ".format(counts[lineno]["src_hits"])
+                            )
+                            write_rtf(
+                                rtf_f,
+                                "%s: %s" % (rtf_prefix, line),
+                                counts[lineno]["src_hits"],
+                            )
                         else:
                             prefix = 20 * " "
                             rtf_prefix = 6 * " "
-                            write_rtf(rtf_f,"%s: %s" % (rtf_prefix, line),-1)
+                            write_rtf(rtf_f, "%s: %s" % (rtf_prefix, line), -1)
                         outfd.write("%s: %s" % (prefix, line))
                         lineno += 1
                 rtf_f.write("}")
