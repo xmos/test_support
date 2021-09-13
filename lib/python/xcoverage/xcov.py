@@ -356,6 +356,7 @@ generating result (saved in xcov dir) for each coveraged src files
 @param trace: a path to trace file
 @param xcov_filename : a path where xcov directory located
 @return total coverage
+@output generate xcov file for handler_combine and saved in xcov dir 
 """
 
 
