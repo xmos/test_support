@@ -6,5 +6,5 @@ This repo contains helpers for testing XMOS xCORE applictions and includes the f
 
 - Python wrapper for the xCORE simulator (xsim)
 - Python access functions for XE files
-- Python xcode coverage measurement for pytest
+- Python code coverage measurement (xcov) for pytest
 
