@@ -352,13 +352,15 @@ def write_rtf(rtf, lines, src_hits):
 
 """
 xcov_process description:
-generating result (saved in xcov dir) for each coveraged src files
+This is the main function to be called in your test.
+It returns the average coverage and save the data in .xcov file in xcov dir.
+.xcov file is necessary for the below "xcov_combine" function.
 
-@param disam: a path to disasm file
-@param trace: a path to trace file
-@param xcov_filename : a path where xcov directory located
-@return total coverage
-@output generate xcov file for handler_combine and saved in xcov dir 
+@param disam: path to disasm file
+@param trace: path to trace file
+@param xcov_dir : path where xcov directory located
+@return average coverage of all src file
+@output generate xcov file for xcov_combine and save in xcov dir
 """
 
 
@@ -457,10 +459,10 @@ def xcov_process(disasm, trace, xcov_filename):
 
 """
 xcov_combine description:
-generating result (rtf file) for each coveraged src files
+This function read data (.xcov file) from xcov dir and create .rtf files which show the details of executed source code.
 
-@param xcov_dir: a path where xcov directory located
-@output generates 2 files - the .coverage and .rtf file
+@param xcov_dir: path where xcov directory located
+@output .coverage and .rtf files
 """
 
 
