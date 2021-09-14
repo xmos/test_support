@@ -238,13 +238,11 @@ class SimThreadImpl(threading.Thread):
         self.complete_event.set()
 
 
-class Xsi():
+class Xsi:
     def __init__(self, xe_path=None, simargs=[], appargs=[]):
         self.xsim = c_void_p()
         self.xe_path = xe_path
-        args = " ".join(
-            ['"{}"'.format(x) for x in simargs + [self.xe_path] + appargs]
-        )
+        args = " ".join(['"{}"'.format(x) for x in simargs + [self.xe_path] + appargs])
         if platform_is_windows():
             args = args.replace("\\", "/")
         c_args = c_char_p(args.encode("utf-8"))
@@ -313,9 +311,7 @@ class Xsi():
         c_package = c_char_p(package)
         c_pin = c_char_p(pin)
         c_value = c_int()
-        status = xsi_lib.xsi_sample_pin(
-            self.xsim, c_package, c_pin, byref(c_value)
-        )
+        status = xsi_lib.xsi_sample_pin(self.xsim, c_package, c_pin, byref(c_value))
         XsiStatus.error_if_not_valid(status)
         return c_value.value
 
@@ -342,9 +338,7 @@ class Xsi():
         c_port = c_char_p(port.encode("utf-8"))
         c_mask = c_int(mask)
         c_value = c_int(value)
-        status = xsi_lib.xsi_drive_port_pins(
-            self.xsim, c_tile, c_port, c_mask, c_value
-        )
+        status = xsi_lib.xsi_drive_port_pins(self.xsim, c_tile, c_port, c_mask, c_value)
         XsiStatus.error_if_not_valid(status)
 
     # TOOD make this pin*s*
@@ -374,9 +368,7 @@ class Xsi():
         c_package = c_char_p(package)
         c_pin = c_char_p(pin)
         c_value = c_int()
-        status = xsi_lib.xsi_is_pin_driving(
-            self.xsim, c_package, c_pin, byref(c_value)
-        )
+        status = xsi_lib.xsi_is_pin_driving(self.xsim, c_package, c_pin, byref(c_value))
         XsiStatus.error_if_not_valid(status)
         return c_value.value
 
@@ -395,9 +387,7 @@ class Xsi():
         c_address = c_int(address)
         c_num_bytes = c_int(num_bytes)
         buf = create_string_buffer(num_bytes)
-        status = xsi_lib.xsi_read_mem(
-            self.xsim, c_tile, c_address, c_num_bytes, buf
-        )
+        status = xsi_lib.xsi_read_mem(self.xsim, c_tile, c_address, c_num_bytes, buf)
         XsiStatus.error_if_not_valid(status)
         if return_ctype:
             return buf
@@ -420,9 +410,7 @@ class Xsi():
         c_address = c_int(address)
         c_num_bytes = c_int(num_bytes)
         buf = create_string_buffer(data)
-        status = xsi_lib.xsi_write_mem(
-            self.xsim, c_tile, c_address, c_num_bytes, buf
-        )
+        status = xsi_lib.xsi_write_mem(self.xsim, c_tile, c_address, c_num_bytes, buf)
         XsiStatus.error_if_not_valid(status)
 
     def write_symbol_word(self, tile, symbol, value, offset=0):
@@ -451,13 +439,11 @@ class Xsi():
         c_tile = c_char_p(tile)
         c_reg_num = c_int(reg_num)
         c_value = c_int(value)
-        status = xsi_lib.xsi_write_pswitch_reg(
-            self.xsim, c_tile, c_reg_num, c_value
-        )
+        status = xsi_lib.xsi_write_pswitch_reg(self.xsim, c_tile, c_reg_num, c_value)
         XsiStatus.error_if_not_valid(status)
 
 
-class XsiPlugin():
+class XsiPlugin:
     def clock(self, xsi):
         pass
 

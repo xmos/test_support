@@ -18,9 +18,7 @@ clean_only = False
 
 
 # This function is called automatically by the runners
-def _build(
-    xe_path, build_config=None, env={}, do_clean=False, build_options=[]
-):
+def _build(xe_path, build_config=None, env={}, do_clean=False, build_options=[]):
 
     # Work out the Makefile path
     path = None
@@ -49,9 +47,7 @@ def _build(
         cmd = ["xmake", "all"]
 
     if do_clean:
-        call_get_output(
-            ["xmake", "clean"], cwd=path, env=my_env
-        )
+        call_get_output(["xmake", "clean"], cwd=path, env=my_env)
 
     if build_config is not None:
         cmd += ["CONFIG=%s" % build_config]
@@ -114,7 +110,7 @@ def run_tester(caps, tester_list):
     return result
 
 
-class SimThread():
+class SimThread:
     def run(self, xsi):
         pass
 

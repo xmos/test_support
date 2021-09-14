@@ -1,0 +1,25 @@
+#!/bin/sh
+
+
+#set default of black_formatter as false
+black_formatter="false"
+black_check_only="false"
+black_formatter=$(git config --bool hooks.black)
+black_check_only=$(git config --bool hooks.blackCheckOnly)
+
+
+if $black_formatter == "true"
+then
+	if $black_check_only == "true"
+	then
+		echo black formatter checking
+		python -m black --check *
+
+	else
+		echo black formatter running
+		python -m black *
+	fi
+else
+	echo "black_formatter off"
+fi
+exit 0

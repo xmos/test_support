@@ -16,6 +16,8 @@ XADDR_RE = re.compile("(.*) at (.*)")
 RTF_header = """{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Courier;}}
 {\\colortbl;\\red0\\green0\\blue255;\\red255\\green0\\blue0;\\red0\\green255\\blue0;\\red0\\green0\\blue0;}
 \\paperw23811\\paperh16838\\margl720\\margr720\\margt720\\margb720
+\\fs25 Green -> compiled and executed | Red -> compiled but not executed | Black -> not compiled\\line
+\\line
 """
 
 disasm_loadable = None
@@ -340,16 +342,16 @@ def write_rtf(rtf, lines, src_hits):
     BLACK = "\\cf4"
     RED = "\\cf2"
     rline = escape_bracket(lines)
-    if src_hits == -1:
+    if src_hits == -1:  # not compiled
         rtf.write("%s %s \\line" % (BLACK, rline))
-    elif src_hits != 0:
+    elif src_hits != 0:  # compiled and executed
         rtf.write("%s %s \\line" % (GREEN, rline))
-    else:
+    else:  # compiled but not executed
         rtf.write("%s %s \\line" % (RED, rline))
 
 
 """
-handler_process description:
+xcov_process description:
 generating result (saved in xcov dir) for each coveraged src files
 
 @param disam: a path to disasm file
@@ -360,7 +362,7 @@ generating result (saved in xcov dir) for each coveraged src files
 """
 
 
-def handler_process(disasm, trace, xcov_filename):
+def xcov_process(disasm, trace, xcov_filename):
 
     global node2jtag_node
     global addrs_in_tile
@@ -454,7 +456,7 @@ def handler_process(disasm, trace, xcov_filename):
 
 
 """
-handler_combine description:
+xcov_combine description:
 generating result (rtf file) for each coveraged src files
 
 @param xcov_dir: a path where xcov directory located
@@ -462,7 +464,7 @@ generating result (rtf file) for each coveraged src files
 """
 
 
-def handler_combine(xcov_dir):
+def xcov_combine(xcov_dir):
     def get_result_files(xcov_dir):
         files = []
         # for dir in dirs:
@@ -522,10 +524,6 @@ def handler_combine(xcov_dir):
             rtf_name = "%s/%s.rtf" % (logs_path, file.replace("/", "__"))
             rtf_f = open(rtf_name, "w")
             rtf_f.write(RTF_header)
-            rtf_f.write(
-                "\\fs25 Green -> included and executed | Red -> included but not executed | Black -> not included\\line"
-            )
-            rtf_f.write("\\line")
             with open(annotated, "w") as outfd:
                 with open(file, "r") as srcfd:
                     lineno = 1

@@ -23,23 +23,17 @@ def pstreekill(process):
         timeout = time.time() + 10  # Timeout in seconds
         while time.time() < timeout:
             # Check the current status of the process
-            status = subprocess.call(
-                ["tasklist", "/nh", "/fi", '"PID eq %s"' % pid]
-            )
+            status = subprocess.call(["tasklist", "/nh", "/fi", '"PID eq %s"' % pid])
             if status.startswith(
                 "INFO: No tasks are running which match the specified criteria"
             ):
                 # Process has shutdown
                 confirmed_termination = True
                 break
-            time.sleep(
-                0.1
-            )  # Avoid spinning too fast while in the timeout loop
+            time.sleep(0.1)  # Avoid spinning too fast while in the timeout loop
         if not confirmed_termination:
             # If the process hasn't shutdown politely yet kill it
-            sys.stdout.write(
-                "Force kill PID %d that hasn't responded to kill\n" % pid
-            )
+            sys.stdout.write("Force kill PID %d that hasn't responded to kill\n" % pid)
             subprocess.call(["taskkill", "/t", "/f", "/pid", str(pid)])
     else:
         # Send SIGINT to the process group to notify all processes that we
@@ -80,9 +74,7 @@ def platform_is_osx():
 
 def platform_is_windows():
     ostype = platform.system()
-    return bool(
-        not re.match(".*Darwin.*", ostype) and re.match(".*[W|w]in.*", ostype)
-    )
+    return bool(not re.match(".*Darwin.*", ostype) and re.match(".*[W|w]in.*", ostype))
 
 
 if platform_is_windows():
@@ -215,9 +207,7 @@ def call(*args, **kwargs):
         process[2].terminate()
         process[2].join(timeout=0.1)  # Avoid always printing wait message
         while process[2].is_alive():
-            sys.stdout.write(
-                "Waiting for PID %d to terminate\n" % process[2].pid
-            )
+            sys.stdout.write("Waiting for PID %d to terminate\n" % process[2].pid)
             process[2].join(timeout=1.0)
 
     if timeout:

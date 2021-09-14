@@ -16,9 +16,7 @@ def lcm(a, b):
 
 class Xe:
     def _get_platform_info(self):
-        call(
-            ["xobjdump", "--split", self.path], silent=True, cwd=self._tempdir
-        )
+        call(["xobjdump", "--split", self.path], silent=True, cwd=self._tempdir)
         xn = parse("%s/platform_def.xn" % self._tempdir)
         self._tile_map = {}
         self.tiles = []
@@ -69,14 +67,10 @@ class Xe:
         symtab = {}
         for line in stdout:
             line = str(line, "utf8")
-            m = re.match(
-                r"Loadable.*for (.*) \(node \"(\d*)\", tile (\d*)", line
-            )
+            m = re.match(r"Loadable.*for (.*) \(node \"(\d*)\", tile (\d*)", line)
             if m:
                 current_tile = m.groups(0)[0]
-            m = re.match(
-                r"(0x[0-9a-fA-F]*).....([^ ]*) *(0x[0-9a-fA-F]*) (.*)$", line
-            )
+            m = re.match(r"(0x[0-9a-fA-F]*).....([^ ]*) *(0x[0-9a-fA-F]*) (.*)$", line)
             if m and current_tile is not None:
                 (address, section, _size, name) = m.groups(0)
                 if section != "*ABS*":
