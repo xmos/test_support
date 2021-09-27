@@ -16,7 +16,7 @@ XADDR_RE = re.compile("(.*) at (.*)")
 RTF_header = """{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Courier;}}
 {\\colortbl;\\red0\\green0\\blue255;\\red255\\green0\\blue0;\\red0\\green255\\blue0;\\red0\\green0\\blue0;}
 \\paperw23811\\paperh16838\\margl720\\margr720\\margt720\\margb720
-\\fs25 Green -> compiled and executed | Red -> compiled but not executed | Black -> not compiled\\line
+\\fs25 Green -> compiled and executed | Red -> compiled but not executed | Black -> not compiled or not expected to be hit\\line
 \\line
 """
 
@@ -561,3 +561,84 @@ def xcov_combine(xcov_dir):
     logs_path = os.path.join(xcov_dir, "logs")
     create_folder(logs_path)
     generate_coverage(logs_path, coverage)
+
+def combine_tests(testpath,specified_test=set([])):
+    def find_xcov():
+        xcov_file_merge = {}
+        if not specified_test:
+            if os.path.isdir(testpath):
+                for test_file in os.listdir(testpath):
+                    test_module = os.path.join(testpath,test_file)
+                    if os.path.isdir(test_module) and test_file.startswith("test_"):
+                        for test_dir in os.walk(test_module):
+                            if test_dir[0].endswith("/xcov"):
+                                xcov_list = []
+                                for xcov_file in test_dir[2]:
+                                    if xcov_file.endswith(".xcov"):
+                                        xcov_list.append(xcov_file)
+                                xcov_file_merge[str(test_dir[0])] = xcov_list
+            else:
+                raise Exception ("%s a not found" % testpath)
+        else:
+            for spec_test in specified_test:
+                if spec_test in os.listdir(testpath):
+                    test_module = os.path.join(testpath,spec_test)
+                    if os.path.isdir(test_module) and spec_test.startswith("test_"):
+                        for test_dir in os.walk(test_module):
+                            if test_dir[0].endswith("/xcov"):
+                                xcov_list = []
+                                for xcov_file in test_dir[2]:
+                                    if xcov_file.endswith(".xcov"):
+                                        xcov_list.append(xcov_file)
+                                xcov_file_merge[str(test_dir[0])] = xcov_list
+                else:
+                    raise Exception ("%s b not found" % spec_test)
+        return xcov_file_merge
+
+    def merge_result(merge_file):
+        result = {}
+        for test, xcovfile_list in merge_file.items():
+
+            for xcovfile in xcovfile_list:
+                if xcovfile not in result:
+                    result[xcovfile] = {}
+                xcovfile_loc = os.path.join(test,xcovfile)
+                with open(xcovfile_loc, 'r') as resfd:
+                    for line in resfd:
+                        srclineno, hitcount, max_h, min_h = line.split(":")
+                        if srclineno not in result[xcovfile]:
+                            if hitcount != "0":
+                                result[xcovfile][srclineno] = "hit"
+                            else:
+                                result[xcovfile][srclineno] = "not hit"
+                        else:
+                            if hitcount != "0":
+                                result[xcovfile][srclineno] = "hit"
+        return result
+
+    def cal_xcoverage(merged_result):
+        no_src = 0
+        no_hit = 0
+        not_hit = {}
+        for key, value in merged_result.items():
+            for line, hitc in value.items():
+                no_src += 1
+                if hitc == "hit":
+                    no_hit += 1
+                elif hitc == "not hit":
+                    if key not in not_hit:
+                        not_hit[key] = []
+                    not_hit[key].append(line)
+
+        return (no_hit/no_src)*100, not_hit
+
+    need_merge = find_xcov()
+    merged_result = merge_result(need_merge)
+    xcoverage_result, not_hit = cal_xcoverage(merged_result)
+    with open("%s/xcoverage_result.txt"%testpath, "w+") as resufd:
+        resufd.write("Included test:%s\n" % specified_test)
+        resufd.write("Total coverage = %f%%\nSource code uncovered: \n" % xcoverage_result)
+        for key, value in not_hit.items():
+            resufd.write("%s at line:\n" % key.replace("__","/").replace(".xcov",""))
+            resufd.write("%s\n"%value)
+    return xcoverage_result
