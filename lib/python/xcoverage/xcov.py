@@ -358,7 +358,7 @@ It returns the average coverage and save the data in .xcov file in xcov dir.
 
 @param disam: path to disasm file
 @param trace: path to trace file
-@param xcov_dir : path where xcov directory located
+@param xcov_dir : path where xcov directory locates
 @return average coverage of all src file
 @output generate xcov file for xcov_combine and save in xcov dir
 """
@@ -461,7 +461,7 @@ def xcov_process(disasm, trace, xcov_filename):
 xcov_combine description:
 This function read data (.xcov file) from xcov dir and create .rtf files which show the details of executed source code.
 
-@param xcov_dir: path where xcov directory located
+@param xcov_dir: path where xcov directory locates
 @output .coverage and .rtf files
 """
 
@@ -562,13 +562,14 @@ def xcov_combine(xcov_dir):
     create_folder(logs_path)
     generate_coverage(logs_path, coverage)
 
-def combine_tests(testpath,specified_test=set([])):
+
+def combine_tests(testpath, specified_test=set([])):
     def find_xcov():
         xcov_file_merge = {}
         if not specified_test:
             if os.path.isdir(testpath):
                 for test_file in os.listdir(testpath):
-                    test_module = os.path.join(testpath,test_file)
+                    test_module = os.path.join(testpath, test_file)
                     if os.path.isdir(test_module) and test_file.startswith("test_"):
                         for test_dir in os.walk(test_module):
                             if test_dir[0].endswith("/xcov"):
@@ -578,11 +579,11 @@ def combine_tests(testpath,specified_test=set([])):
                                         xcov_list.append(xcov_file)
                                 xcov_file_merge[str(test_dir[0])] = xcov_list
             else:
-                raise Exception ("%s a not found" % testpath)
+                raise Exception("%s a not found" % testpath)
         else:
             for spec_test in specified_test:
                 if spec_test in os.listdir(testpath):
-                    test_module = os.path.join(testpath,spec_test)
+                    test_module = os.path.join(testpath, spec_test)
                     if os.path.isdir(test_module) and spec_test.startswith("test_"):
                         for test_dir in os.walk(test_module):
                             if test_dir[0].endswith("/xcov"):
@@ -592,7 +593,7 @@ def combine_tests(testpath,specified_test=set([])):
                                         xcov_list.append(xcov_file)
                                 xcov_file_merge[str(test_dir[0])] = xcov_list
                 else:
-                    raise Exception ("%s b not found" % spec_test)
+                    raise Exception("%s b not found" % spec_test)
         return xcov_file_merge
 
     def merge_result(merge_file):
@@ -602,8 +603,8 @@ def combine_tests(testpath,specified_test=set([])):
             for xcovfile in xcovfile_list:
                 if xcovfile not in result:
                     result[xcovfile] = {}
-                xcovfile_loc = os.path.join(test,xcovfile)
-                with open(xcovfile_loc, 'r') as resfd:
+                xcovfile_loc = os.path.join(test, xcovfile)
+                with open(xcovfile_loc, "r") as resfd:
                     for line in resfd:
                         srclineno, hitcount, max_h, min_h = line.split(":")
                         if srclineno not in result[xcovfile]:
@@ -630,15 +631,17 @@ def combine_tests(testpath,specified_test=set([])):
                         not_hit[key] = []
                     not_hit[key].append(line)
 
-        return (no_hit/no_src)*100, not_hit
+        return (no_hit / no_src) * 100, not_hit
 
     need_merge = find_xcov()
     merged_result = merge_result(need_merge)
     xcoverage_result, not_hit = cal_xcoverage(merged_result)
-    with open("%s/xcoverage_result.txt"%testpath, "w+") as resufd:
+    with open("%s/xcoverage_result.txt" % testpath, "w+") as resufd:
         resufd.write("Included test:%s\n" % specified_test)
-        resufd.write("Total coverage = %f%%\nSource code uncovered: \n" % xcoverage_result)
+        resufd.write(
+            "Total coverage = %f%%\nSource code uncovered: \n" % xcoverage_result
+        )
         for key, value in not_hit.items():
-            resufd.write("%s at line:\n" % key.replace("__","/").replace(".xcov",""))
-            resufd.write("%s\n"%value)
+            resufd.write("%s at line:\n" % key.replace("__", "/").replace(".xcov", ""))
+            resufd.write("%s\n" % value)
     return xcoverage_result
