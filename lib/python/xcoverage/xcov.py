@@ -562,6 +562,15 @@ def xcov_combine(xcov_dir):
     create_folder(logs_path)
     generate_coverage(logs_path, coverage)
 
+"""
+combine_tests description:
+This function merge the result over different tests and return the average coverage of all tests.
+
+@param testpath: path where test_ files locate
+@param specified_test: specify test result to be combined. Type: set([]). Default: walk through all test_ file which have xcov dir
+@return average coverage of all test
+@output generate a overall test report that indicate the overall coverage and the uncovered source code
+"""
 
 def combine_tests(testpath, specified_test=set([])):
     def find_xcov():
