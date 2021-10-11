@@ -616,7 +616,7 @@ class combine_tests(xcov_combine):
         self.result = {}
         self.tpath = testpath
         create_folder("result")
-        self.resufd = open("%s/result/xcoverage_result.txt" % testpath, "w+")
+        self.resufd = open("%s/result/xcoverage_result.txt" % testpath, "w")
         super().__init__()
 
     def close_fd(self):
