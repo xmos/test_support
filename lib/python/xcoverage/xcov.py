@@ -466,8 +466,7 @@ This function read data (.xcov file) from xcov dir and create .rtf files which s
 """
 
 
-class xcov_combine():
-
+class xcov_combine:
     def __init__(self):
         self.coverage = {}
 
@@ -523,42 +522,29 @@ class xcov_combine():
                         coverage[filename][lineno]["asm_count_max"] = asm_count
                     coverage[filename][lineno]["src_hits"] += src_hits
                     coverage[filename][lineno]["asm_hits"] += asm_hits
-            #delete .xcov after combined
+            # delete .xcov after combined
             os.remove(file)
 
-        #for multi-processing
+        # for multi-processing
         pid = os.getpid()
-        wt = open("tmp_testresult_%d.txt"%pid, "w+")
+        wt = open("tmp_testresult_%d.txt" % pid, "w+")
 
-        if os.stat("tmp_testresult_%d.txt"%pid).st_size == 0:
-            for filename in coverage:
-                for lineno in coverage[filename]:
-                    wt.write("%s:%d:%d\n" % (filename, lineno, coverage[filename][lineno]["src_hits"]))
-                    # wt.write("asm hit: %s %d %d\n" % (filename, lineno, coverage[filename][lineno]["asm_hits"]))
-        else:
-            lines = wt.readlines()
-            fn_and_line = {}
-            for line in lines:
-                fname, linenumber, hits = line.split(":")
-                fnandline = fname+":"+linenumber
-                fn_and_line[fnandline] = int(hits)
-            for filename in coverage:
-                for lineno in coverage[filename]:
-                    if ("%s:%d"%(filename, lineno)) in fn_and_line:
-                        new_hits = coverage[filename][lineno]["src_hits"] + fn_and_line["%s:%d"%(filename, lineno)]
-                        fn_and_line["%s:%d"%(filename, lineno)] = new_hits
-                        # wt.write("%s:%d:%d\n" % (filename, lineno, new_hits))
-                    else:
-                        fn_and_line["%s:%d"%(filename, lineno)] = coverage[filename][lineno]["src_hits"]
-                        # wt.write("%s:%d:%d\n" % (filename, lineno, coverage[filename][lineno]["src_hits"]))
-            for key, value in fn_and_line.items():
-                fname, linenumber = line.split(":")
-                wt.write("%s:%d:%d\n" % (fname, linenumber, value))
+        for filename in coverage:
+            for lineno in coverage[filename]:
+                wt.write(
+                    "%s:%d:%d\n"
+                    % (filename, lineno, coverage[filename][lineno]["src_hits"])
+                )
+
+        wt.close()
 
     def remove_tmp_testresult(self, path):
         for file in os.listdir(path):
             if file.startswith("tmp_testresult_"):
-                os.remove(file)
+                try:
+                    os.remove(file)
+                except:
+                    pass
 
     def generate_coverage(self, logs_path, coverage):
         for (file, counts) in coverage.items():
@@ -571,15 +557,8 @@ class xcov_combine():
                     lineno = 1
                     for line in srcfd:
                         if lineno in counts:
-                            prefix = "%s" % (
-                                "{:8s} ".format(counts[lineno]),
-                                # "{:5d} ".format(counts[lineno]["asm_hits"]),
-                                # "{:3d} ".format(counts[lineno]["asm_count_max"]),
-                                # "{:3d} ".format(counts[lineno]["asm_count_min"]),
-                            )
-                            rtf_prefix = "%s" % (
-                                "{:8s} ".format(counts[lineno])
-                            )
+                            prefix = "%s" % ("{:8s} ".format(counts[lineno]),)
+                            rtf_prefix = "%s" % ("{:8s} ".format(counts[lineno]))
                             write_rtf(
                                 rtf_f,
                                 "%s: %s" % (rtf_prefix, line),
@@ -600,6 +579,7 @@ class xcov_combine():
         coverage = self.init_coverage(files)
         self.combine_results(files, coverage, xcov_dir)
 
+
 """
 combine_tests description:
 This function merge the result over different tests and return the average coverage of all tests.
@@ -610,8 +590,8 @@ This function merge the result over different tests and return the average cover
 @output generate a overall test report that indicate the overall coverage and the uncovered source code
 """
 
-class combine_tests(xcov_combine):
 
+class combine_tests(xcov_combine):
     def __init__(self, testpath):
         self.result = {}
         self.tpath = testpath
@@ -621,36 +601,6 @@ class combine_tests(xcov_combine):
 
     def close_fd(self):
         self.resufd.close()
-
-    # def find_xcov(self, testpath, specified_test):
-    #     xcov_file_merge = {}
-
-    #     def find_file_and_del_log(test_file):
-    #         test_module = os.path.join(testpath, test_file)
-    #         if os.path.isdir(test_module) and test_file.startswith("test_"):
-    #             for test_dir in os.walk(test_module):
-    #                 if test_dir[0].endswith("/xcov"):
-    #                     xcov_list = []
-    #                     for xcov_file in test_dir[2]:
-    #                         if xcov_file.endswith(".xcov"):
-    #                             xcov_list.append(xcov_file)
-    #                     xcov_file_merge[str(test_dir[0])] = xcov_list
-    #                 if test_dir[0].endswith("/logs"):
-    #                     shutil.rmtree(test_dir[0])
-
-    #     if not specified_test:
-    #         if os.path.isdir(testpath):
-    #             for test_file in os.listdir(testpath):
-    #                 find_file_and_del_log(test_file)
-    #         else:
-    #             raise Exception("%s not found" % testpath)
-    #     else:
-    #         for spec_test in specified_test:
-    #             if spec_test in os.listdir(testpath):
-    #                 find_file_and_del_log(spec_test)
-    #             else:
-    #                 raise Exception("%s not found" % spec_test)
-    #     return xcov_file_merge
 
     def find_testresult(self, path):
         testresult = []
@@ -704,11 +654,13 @@ class combine_tests(xcov_combine):
             "Total coverage = %f%%\nSource code uncovered: \n" % xcoverage_result
         )
         for key, value in not_hit.items():
-            self.resufd.write("%s at line:\n" % key.replace("__", "/").replace(".xcov", ""))
+            self.resufd.write(
+                "%s at line:\n" % key.replace("__", "/").replace(".xcov", "")
+            )
             self.resufd.write("%s\n" % value)
-        return xcoverage_result 
+        return xcoverage_result
 
-    #running at the end of test
+    # running at the end of test
     def generate_merge_src(self, logpath):
         logp = os.path.join(self.tpath, logpath)
         self.generate_coverage(logp, self.result)
