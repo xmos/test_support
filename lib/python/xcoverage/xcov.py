@@ -591,7 +591,7 @@ This function merge the result over different tests and return the average cover
 """
 
 
-class combine_tests(xcov_combine):
+class combine_process(xcov_combine):
     def __init__(self, testpath):
         self.result = {}
         self.tpath = testpath
