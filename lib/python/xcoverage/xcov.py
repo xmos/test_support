@@ -14,9 +14,9 @@ DISASM_RE = re.compile(".*0x([0-9a-fA-F]*): .*: \s*(\w*) \(.*")
 TRACE_RE = re.compile("tile\[([0-9]*)\]@([0-9]).*--.-\.*([0-9a-fA-F]*) \((.*)\) : (.*)")
 XADDR_RE = re.compile("(.*) at (.*)")
 RTF_header = """{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Courier;}}
-{\\colortbl;\\red0\\green0\\blue255;\\red255\\green0\\blue0;\\red51\\green102\\blue0;\\red170\\green165\\blue165;}
+{\\colortbl;\\red0\\green0\\blue255;\\red255\\green0\\blue0;\\red11\\green102\\blue20;\\red170\\green165\\blue165;}
 \\paperw23811\\paperh16838\\margl720\\margr720\\margt720\\margb720
-\\fs25 Green -> compiled and executed | Red -> compiled but not executed | GRAY -> not compiled or not expected to be hit\\line
+\\fs25 Green -> compiled and executed | Red -> compiled but not executed | GRAY -> not expected to be hit\\line
 \\line
 """
 
@@ -344,7 +344,7 @@ def write_rtf(rtf, lines, src_hits):
     rline = escape_bracket(lines)
     if src_hits == -1:  # not compiled
         rtf.write("%s %s \\line" % (GRAY, rline))
-    elif src_hits == "hit":  # compiled and executed
+    elif src_hits != "not hit":  # compiled and executed
         rtf.write("%s %s \\line" % (GREEN, rline))
     else:  # compiled but not executed
         rtf.write("%s %s \\line" % (RED, rline))
@@ -620,45 +620,47 @@ class combine_process(xcov_combine):
                         self.result[srcloc] = {}
                     if lineno not in self.result[srcloc]:
                         if hitcount != "0":
-                            self.result[srcloc][lineno] = "hit"
+                            self.result[srcloc][lineno] = hitcount
                         else:
                             self.result[srcloc][lineno] = "not hit"
                     else:
                         if hitcount != "0":
-                            self.result[srcloc][lineno] = "hit"
+                            self.result[srcloc][lineno] = hitcount
         return self.result
 
     def cal_xcoverage(self, merged_result):
-        no_src = 0
-        no_hit = 0
+        num_src = 0
+        num_hit = 0
         not_hit = {}
         for key, value in merged_result.items():
             for line, hitc in value.items():
-                no_src += 1
-                if hitc == "hit":
-                    no_hit += 1
-                elif hitc == "not hit":
+                num_src += 1
+                if hitc != "not hit":
+                    num_hit += 1
+                else:
                     if key not in not_hit:
                         not_hit[key] = []
                     not_hit[key].append(line)
 
-        return (no_hit / no_src) * 100, not_hit
+        return num_hit, num_src, not_hit
 
     def do_combine_test(self, specified_test=set([])):
         need_merge = self.find_testresult(self.tpath)
         merged_result = self.do_merge_result(need_merge)
-        xcoverage_result, not_hit = self.cal_xcoverage(merged_result)
+        num_hit, num_src, not_hit = self.cal_xcoverage(merged_result)
         # with open("%s/xcoverage_result.txt" % testpath, "w+") as resufd:
-        self.resufd.write("Included test:%s\n" % specified_test)
+        self.resufd.write("Included test: %s\n" % specified_test)
+        self.resufd.write("source code: %d\n" % num_src)
+        self.resufd.write("hit: %d\n" % num_hit)
         self.resufd.write(
-            "Total coverage = %f%%\nSource code uncovered: \n" % xcoverage_result
+            "Overall coverage = %f%%\nSource code uncovered: \n" % ((num_hit/num_src)*100)
         )
         for key, value in not_hit.items():
             self.resufd.write(
                 "%s at line:\n" % key.replace("__", "/").replace(".xcov", "")
             )
             self.resufd.write("%s\n" % value)
-        return xcoverage_result
+        return (num_hit/num_src)*100
 
     # running at the end of test
     def generate_merge_src(self, logpath):
