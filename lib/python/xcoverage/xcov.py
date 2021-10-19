@@ -2,7 +2,7 @@ import os
 import shutil
 import re
 import sys
-import subprocess
+import subprocess as ps
 import argparse
 import datetime
 import xml.etree.ElementTree as ET
@@ -13,10 +13,11 @@ LOADABLE_RE = re.compile(
 DISASM_RE = re.compile(".*0x([0-9a-fA-F]*): .*: \s*(\w*) \(.*")
 TRACE_RE = re.compile("tile\[([0-9]*)\]@([0-9]).*--.-\.*([0-9a-fA-F]*) \((.*)\) : (.*)")
 XADDR_RE = re.compile("(.*) at (.*)")
+NE_RE = re.compile(".*//[ ]*NE")
 RTF_header = """{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Courier;}}
 {\\colortbl;\\red0\\green0\\blue255;\\red255\\green0\\blue0;\\red11\\green102\\blue20;\\red170\\green165\\blue165;}
 \\paperw23811\\paperh16838\\margl720\\margr720\\margt720\\margb720
-\\fs25 Green -> compiled and executed | Red -> compiled but not executed | GRAY -> not expected to be hit\\line
+\\fs25 Green -> compiled and executed | Red -> compiled but not executed | GRAY -> not expected to be hit (NE) or not be compiled\\line
 \\line
 """
 
@@ -59,6 +60,19 @@ def init_elf_mapping(xcov_filename):
     for (node, id) in nodes.items():
         node2jtag_node[node] = node_jtag_id.index(id)
 
+
+def generate_elf_disasm(binary, split_dir, disasm):
+    cmd_elf = (
+        "xobjdump --split " + binary + " --split-dir " + split_dir + " > /dev/null 2>&1"
+    )
+
+    cmd_disasm = "xobjdump -S " + binary + " -o " + disasm
+    try:
+        ps.run(cmd_elf, shell=True, check=True)
+        ps.run(cmd_disasm, shell=True, check=True)
+    except:
+        print("Error running build disasm")
+        sys.exit(1)
 
 # For each node/core combination there could be two elf files. If there are two then they will be named
 # e.g. image_n1c0.elf and image_n1c0_2.elf, and the first file will contain the jtag boot code.
@@ -116,7 +130,7 @@ def init_addr2line(coverage_files, coverage_lines, xcov_filename):
 
     # Get the maximum command length from the shell
     cmd = "getconf ARG_MAX"
-    arg_max = int(subprocess.check_output(cmd.split()))
+    arg_max = int(ps.check_output(cmd.split()))
     for tile in addrs_in_tile.keys():
         addrs = addrs_in_tile[tile]["addr"]
         asm = addrs_in_tile[tile]["asm"]
@@ -142,7 +156,7 @@ def init_addr2line(coverage_files, coverage_lines, xcov_filename):
                 addrs_subset.append(addrs.pop())
                 asm_subset.append(asm.pop())
                 cmd += " 0x%s" % addrs_subset[-1]
-            results = subprocess.check_output(cmd.split())
+            results = ps.check_output(cmd.split())
             results = results.decode("utf-8")
             results = results.split("\n")[:-1]
             if len(addrs_subset) != len(results):
@@ -342,7 +356,7 @@ def write_rtf(rtf, lines, src_hits):
     GRAY = "\\cf4"
     RED = "\\cf2"
     rline = escape_bracket(lines)
-    if src_hits == -1:  # not compiled
+    if src_hits == -1 or src_hits == "NE":  # not compiled
         rtf.write("%s %s \\line" % (GRAY, rline))
     elif src_hits != "not hit":  # compiled and executed
         rtf.write("%s %s \\line" % (GREEN, rline))
@@ -531,10 +545,19 @@ class xcov_combine:
 
         for filename in coverage:
             for lineno in coverage[filename]:
-                wt.write(
-                    "%s:%d:%d\n"
-                    % (filename, lineno, coverage[filename][lineno]["src_hits"])
-                )
+                src_file = open(filename, "r")
+                src_line = src_file.readlines()
+                m = NE_RE.match(src_line[int(lineno-1)])
+                if m:
+                    wt.write(
+                        "%s:%d:%s\n"
+                        % (filename, lineno, "NE")
+                    )
+                else:
+                    wt.write(
+                        "%s:%d:%d\n"
+                        % (filename, lineno, coverage[filename][lineno]["src_hits"])
+                    )
 
         wt.close()
 
@@ -590,7 +613,6 @@ This function merge the result over different tests and return the average cover
 @output generate a overall test report that indicate the overall coverage and the uncovered source code
 """
 
-
 class combine_process(xcov_combine):
     def __init__(self, testpath):
         self.result = {}
@@ -619,35 +641,47 @@ class combine_process(xcov_combine):
                     if srcloc not in self.result:
                         self.result[srcloc] = {}
                     if lineno not in self.result[srcloc]:
-                        if hitcount != "0":
-                            self.result[srcloc][lineno] = hitcount
+                        if hitcount == "NE":
+                            self.result[srcloc][lineno] = "NE"
+                        elif hitcount != "0":
+                            self.result[srcloc][lineno] = "hit"
                         else:
                             self.result[srcloc][lineno] = "not hit"
                     else:
-                        if hitcount != "0":
-                            self.result[srcloc][lineno] = hitcount
+                        if hitcount == "NE":
+                            self.result[srcloc][lineno] = "NE"
+                        elif hitcount != "0":
+                            self.result[srcloc][lineno] = "hit"
         return self.result
 
     def cal_xcoverage(self, merged_result):
         num_src = 0
         num_hit = 0
         not_hit = {}
+        not_expected ={}
         for key, value in merged_result.items():
             for line, hitc in value.items():
                 num_src += 1
-                if hitc != "not hit":
+                if hitc != "not hit" and hitc != "NE":
                     num_hit += 1
                 else:
-                    if key not in not_hit:
-                        not_hit[key] = []
-                    not_hit[key].append(line)
+                    if hitc == "not hit":
+                        if key not in not_hit:
+                            not_hit[key] = []
+                    else:
+                        if key not in not_expected:
+                            not_expected[key] = []
+                    if hitc == "not hit":        
+                        not_hit[key].append(line)
+                    else:
+                        not_expected[key].append(line)
 
-        return num_hit, num_src, not_hit
+        return num_hit, num_src, not_hit, not_expected
 
     def do_combine_test(self, specified_test=set([])):
         need_merge = self.find_testresult(self.tpath)
         merged_result = self.do_merge_result(need_merge)
-        num_hit, num_src, not_hit = self.cal_xcoverage(merged_result)
+        num_hit, num_src, not_hit, not_expected = self.cal_xcoverage(merged_result)
         # with open("%s/xcoverage_result.txt" % testpath, "w+") as resufd:
         self.resufd.write("Included test: %s\n" % specified_test)
         self.resufd.write("source code: %d\n" % num_src)
@@ -656,6 +690,12 @@ class combine_process(xcov_combine):
             "Overall coverage = %f%%\nSource code uncovered: \n" % ((num_hit/num_src)*100)
         )
         for key, value in not_hit.items():
+            self.resufd.write(
+                "%s at line:\n" % key.replace("__", "/").replace(".xcov", "")
+            )
+            self.resufd.write("%s\n" % value)
+        self.resufd.write("Source code not expected to be hit: \n" )
+        for key, value in not_expected.items():
             self.resufd.write(
                 "%s at line:\n" % key.replace("__", "/").replace(".xcov", "")
             )

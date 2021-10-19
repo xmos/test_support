@@ -17,6 +17,7 @@ It requires disassembly and elf file which dumped from binary file (.xe file) by
 
  * xobjdump --split [.xe].
  * xobjdump -S [.xe] -o [output_file_name.dump].
+ * run the above 2 step by youself or run method from xcov: generate_elf_disasm("/path_to/(name-of-xe).xe", "/path_where_store_elf_and_disasm", "/path_to/(name-of-disasm).dump")
 
 .xe must make with -g flag to enable the gdb bugger otherwise xcoverage won't work!.
 
@@ -42,24 +43,23 @@ xcov_process(disasm, trace, xcov_dir).
 ``xcov_combine``
 .......................
 
-This function read data (.xcov file) from xcov dir and create .rtf files which show the details of executed source code.
+see example in test/test_xcoverage
 
-xcov_combine(xcov_dir).
-
- * @param xcov_dir: path where xcov directory locates.
- * @output .coverage and .rtf files.
-
-``combine_tests``
+``combine_process``
 .......................
 
-This function merge the result over different tests and return the average coverage of all tests.
+see example in test/test_xcoverage
 
-combine_tests(testpath, specified_test=set([])).
+``To mark the source code as not expected to be hit``
+........................................................
 
- * @param testpath: path where test_ files locate
- * @param specified_test: specify test result to be combined. Type: set([]). Default: walk through all test_ file which have xcov dir.
- * @return all tests' average coverage
- * @output generate a overall test report that indicate the overall coverage and the uncovered source code.
+Simply add a comment "//NE" beside to you source code. It wouldn't be counted in coverage.
+
+see example in test/test_xcoverage
+
+
+
+
 
 
 
