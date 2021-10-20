@@ -74,6 +74,7 @@ def generate_elf_disasm(binary, split_dir, disasm):
         print("Error running build disasm")
         sys.exit(1)
 
+
 # For each node/core combination there could be two elf files. If there are two then they will be named
 # e.g. image_n1c0.elf and image_n1c0_2.elf, and the first file will contain the jtag boot code.
 # The naming of these files unfortunately uses the jtag chain numbering for the nodes.
@@ -547,12 +548,9 @@ class xcov_combine:
             for lineno in coverage[filename]:
                 src_file = open(filename, "r")
                 src_line = src_file.readlines()
-                m = NE_RE.match(src_line[int(lineno-1)])
+                m = NE_RE.match(src_line[int(lineno - 1)])
                 if m:
-                    wt.write(
-                        "%s:%d:%s\n"
-                        % (filename, lineno, "NE")
-                    )
+                    wt.write("%s:%d:%s\n" % (filename, lineno, "NE"))
                 else:
                     wt.write(
                         "%s:%d:%d\n"
@@ -613,6 +611,7 @@ This function merge the result over different tests and return the average cover
 @output generate a overall test report that indicate the overall coverage and the uncovered source code
 """
 
+
 class combine_process(xcov_combine):
     def __init__(self, testpath):
         self.result = {}
@@ -658,7 +657,7 @@ class combine_process(xcov_combine):
         num_src = 0
         num_hit = 0
         not_hit = {}
-        not_expected ={}
+        not_expected = {}
         for key, value in merged_result.items():
             for line, hitc in value.items():
                 num_src += 1
@@ -671,7 +670,7 @@ class combine_process(xcov_combine):
                     else:
                         if key not in not_expected:
                             not_expected[key] = []
-                    if hitc == "not hit":        
+                    if hitc == "not hit":
                         not_hit[key].append(line)
                     else:
                         not_expected[key].append(line)
@@ -687,20 +686,21 @@ class combine_process(xcov_combine):
         self.resufd.write("source code: %d\n" % num_src)
         self.resufd.write("hit: %d\n" % num_hit)
         self.resufd.write(
-            "Overall coverage = %f%%\nSource code uncovered: \n" % ((num_hit/num_src)*100)
+            "Overall coverage = %f%%\nSource code uncovered: \n"
+            % ((num_hit / num_src) * 100)
         )
         for key, value in not_hit.items():
             self.resufd.write(
                 "%s at line:\n" % key.replace("__", "/").replace(".xcov", "")
             )
             self.resufd.write("%s\n" % value)
-        self.resufd.write("Source code not expected to be hit: \n" )
+        self.resufd.write("Source code not expected to be hit: \n")
         for key, value in not_expected.items():
             self.resufd.write(
                 "%s at line:\n" % key.replace("__", "/").replace(".xcov", "")
             )
             self.resufd.write("%s\n" % value)
-        return (num_hit/num_src)*100
+        return (num_hit / num_src) * 100
 
     # running at the end of test
     def generate_merge_src(self, logpath):
