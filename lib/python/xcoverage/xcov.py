@@ -578,12 +578,10 @@ class xcov_combine:
                     lineno = 1
                     for line in srcfd:
                         if lineno in counts:
-                            prefix = "%s" % ("{:8s} ".format(counts[lineno]),)
+                            prefix = "%s" % ("{:8s} ".format(counts[lineno]))
                             rtf_prefix = "%s" % ("{:8s} ".format(counts[lineno]))
                             write_rtf(
-                                rtf_f,
-                                "%s: %s" % (rtf_prefix, line),
-                                counts[lineno],
+                                rtf_f, "%s: %s" % (rtf_prefix, line), counts[lineno]
                             )
                         else:
                             prefix = 9 * " "
@@ -694,7 +692,7 @@ class combine_process(xcov_combine):
                 "%s at line:\n" % key.replace("__", "/").replace(".xcov", "")
             )
             self.resufd.write("%s\n" % value)
-        self.resufd.write("Source code not expected to be hit: \n")
+        self.resufd.write("\nSource code not expected to be hit: \n")
         for key, value in not_expected.items():
             self.resufd.write(
                 "%s at line:\n" % key.replace("__", "/").replace(".xcov", "")
