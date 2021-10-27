@@ -13,7 +13,7 @@ setuptools.setup(
     name="test_support",
     packages=setuptools.find_packages(),
     install_requires=[
-        "black~=20.2",
+        "black",
     ],
     dependency_links=[],
 )
