@@ -100,16 +100,12 @@ class ComparisonTester:
             line_num += 1
 
             if line_num >= num_expected:
-                self.record_failure(
-                    "Length of expected output less than output"
-                )
+                self.record_failure("Length of expected output less than output")
                 break
 
             if self._ordered:
                 if regexp:
-                    match = re.match(
-                        expected[line_num] + "$", line.strip()
-                    )
+                    match = re.match(expected[line_num] + "$", line.strip())
                 else:
                     match = expected[line_num] == line.strip()
 
@@ -135,10 +131,7 @@ class ComparisonTester:
 
                 if not match:
                     self.record_failure(
-                        (
-                            "Line %d of output not found in expected\n"
-                            + "  Actual  : %s"
-                        )
+                        ("Line %d of output not found in expected\n" + "  Actual  : %s")
                         % (line_num, line.strip())
                     )
 
