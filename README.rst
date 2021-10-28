@@ -61,6 +61,7 @@ Software version and dependencies
 .................................
 
 The CHANGELOG contains information about the current and previous versions.
+For a list of direct dependencies, look for DEPENDENT_MODULES in test_support/module_build_info.
 
 
 

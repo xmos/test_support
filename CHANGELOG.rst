@@ -1,8 +1,7 @@
-
 Test Support Changelog
 ======================
 
 1.0.0
 -----
 
-    - Initial Release
+  * Initial Release version 1.0.0
