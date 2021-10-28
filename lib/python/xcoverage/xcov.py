@@ -1,3 +1,5 @@
+# Copyright 2016-2021 XMOS LIMITED.
+# This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import os
 import shutil
 import re
@@ -466,22 +468,24 @@ def xcov_process(disasm, trace, xcov_filename):
         coverage_rate = float(100 * (len(coverage[file]) - nocov) / len(coverage[file]))
         total_src_covered += len(coverage[file]) - nocov
         total_src += len(coverage[file])
-        print("%s: %f%% covered" % (file, coverage_rate))
     total_coverage = float(100 * (total_src_covered / total_src))
-    print("Total coverage: %f%% covered" % total_coverage)
     return total_coverage
 
 
-"""
-xcov_combine description:
-This function read data (.xcov file) from xcov dir and create .rtf files which show the details of executed source code.
-
-@param xcov_dir: path where xcov directory locates
-@output .coverage and .rtf files
-"""
-
-
 class xcov_combine:
+    """
+    A class used to merge coverage result over source codes
+
+    ...
+
+    Attributes
+    ----------
+    coverage : dict
+        a dict to store the location of source code and line number and result
+
+    Methods
+    ----
+    """
     def __init__(self):
         self.coverage = {}
 
@@ -506,7 +510,18 @@ class xcov_combine:
                 self.coverage[covfile] = {}
         return self.coverage
 
-    def combine_results(self, files, coverage, xcov_dir):
+    def combine_results(self, files, coverage):
+        """
+        combine results over .xcov files
+
+        Parameters
+        ----------
+        files : list
+            list of test file name
+        coverage : dict
+            a dict to store the location of source code and line number and result 
+
+        """
         for file in files:
             filename = self.file2covfile(file)
             print("Processing %s" % file)
@@ -568,6 +583,17 @@ class xcov_combine:
                     pass
 
     def generate_coverage(self, logs_path, coverage):
+        """
+        generate coverage files (labelling the hit status in source file)
+
+        Parameters
+        ----------
+        logs_path : str
+            a path to store the coverage files
+        coverage : dict
+            a dict to store the location of source code and line number and result 
+
+        """
         for (file, counts) in coverage.items():
             annotated = "%s/%s.coverage" % (logs_path, file.replace("/", "__"))
             rtf_name = "%s/%s.rtf" % (logs_path, file.replace("/", "__"))
@@ -594,23 +620,38 @@ class xcov_combine:
             print("Written coverage to %s" % annotated)
 
     def run_combine(self, xcov_dir):
+        """
+        run this to combine the result over source files
+
+        Parameters
+        ----------
+        xcov_dir : str
+            a path where xcov dir located
+
+        """
         files = self.get_result_files(xcov_dir)
         coverage = self.init_coverage(files)
-        self.combine_results(files, coverage, xcov_dir)
-
-
-"""
-combine_tests description:
-This function merge the result over different tests and return the average coverage of all tests.
-
-@param testpath: path where test_ files locate
-@param specified_test: specify test result to be combined. Type: set([]). Default: walk through all test_ file which have xcov dir
-@return average coverage of all test
-@output generate a overall test report that indicate the overall coverage and the uncovered source code
-"""
+        self.combine_results(files, coverage)
 
 
 class combine_process(xcov_combine):
+    """
+    A class used to merge coverage result over multi processes
+
+    ...
+
+    Attributes
+    ----------
+    result : dict
+        a dict to store the location of source code and line number and result
+    tpath : str
+        path of test file
+    resufd : file object
+        a file to save the final result
+
+    Methods
+    -------
+    """
     def __init__(self, testpath):
         self.result = {}
         self.tpath = testpath
@@ -622,6 +663,14 @@ class combine_process(xcov_combine):
         self.resufd.close()
 
     def find_testresult(self, path):
+        """
+        find and return path of tmp_testresult file
+
+        Parameters
+        ----------
+        path : str
+            path of test file
+        """
         testresult = []
         for file in os.listdir(path):
             if file.startswith("tmp_testresult_"):
@@ -629,6 +678,18 @@ class combine_process(xcov_combine):
         return testresult
 
     def do_merge_result(self, merge_file):
+        """
+        merge and store the result to self.result
+
+        Parameters
+        ----------
+        merge_file : list
+            list of files that need merge
+
+        Return
+        ------
+        self.result
+        """
         for test in merge_file:
             with open(test, "r") as resfd:
                 for line in resfd:
@@ -652,6 +713,26 @@ class combine_process(xcov_combine):
         return self.result
 
     def cal_xcoverage(self, merged_result):
+        """
+        calculate coverage by merged_result
+
+        Parameters
+        ----------
+        merged_result : dict
+            a dict store the location of source code and line number and result
+
+        Return
+        ------
+        num_hit : int
+            hit count
+        num_src : int
+            source count
+        not_hit : dict
+            a dict store the source code which not being hit
+        not_expected : dict
+            a dict store the source code which not expected to be hit
+
+        """
         num_src = 0
         num_hit = 0
         not_hit = {}
@@ -675,7 +756,33 @@ class combine_process(xcov_combine):
 
         return num_hit, num_src, not_hit, not_expected
 
+    # running at the end of test
+    def generate_merge_src(self):
+        """
+        marking execution status (hit , not hot or NE) on source file and store it in logpath directory
+
+        Parameters
+        ----------
+        logpath : str
+            the directory to store the resulted source file
+        """
+        logp = os.path.join(self.tpath, "result")
+        self.generate_coverage(logp, self.result)
+
     def do_combine_test(self, specified_test=set([])):
+        """
+        run combine_process by do_combine_test
+
+        Parameters
+        ----------
+        specified_test : list
+            specified the tests which need to combine
+
+        Return
+        ------
+        float
+            overall coverage
+        """
         need_merge = self.find_testresult(self.tpath)
         merged_result = self.do_merge_result(need_merge)
         num_hit, num_src, not_hit, not_expected = self.cal_xcoverage(merged_result)
@@ -699,8 +806,3 @@ class combine_process(xcov_combine):
             )
             self.resufd.write("%s\n" % value)
         return (num_hit / num_src) * 100
-
-    # running at the end of test
-    def generate_merge_src(self, logpath):
-        logp = os.path.join(self.tpath, logpath)
-        self.generate_coverage(logp, self.result)
