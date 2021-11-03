@@ -57,6 +57,12 @@ Add a comment "//NE" beside you source code. It wouldn't be counted in coverage.
 
 see example in test/test_xcoverage
 
+Software version and dependencies
+.................................
+
+The CHANGELOG contains information about the current and previous versions.
+For a list of direct dependencies, look for DEPENDENT_MODULES in test_support/module_build_info.
+
 
 
 
