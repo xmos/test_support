@@ -11,6 +11,7 @@ import setuptools
 # The same modules should appear in the requirements.txt file as given below.
 setuptools.setup(
     name="test_support",
+    package_dir={'': 'lib/python'},
     packages=setuptools.find_packages(),
     install_requires=[
         "black",
