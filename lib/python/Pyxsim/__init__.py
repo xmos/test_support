@@ -10,6 +10,7 @@ import multiprocessing
 import os
 import re
 import sys
+from typing import Sequence
 
 from Pyxsim.xmostest_subprocess import call_get_output
 from . import pyxsim
@@ -111,17 +112,17 @@ def run_tester(caps, tester_list):
 
 
 class SimThread:
-    def run(self, xsi):
+    def run(self, _) -> None:
         pass
 
-    def wait(self, f):
+    def wait(self, f:int) -> None:
         self.xsi._user_wait(f)
 
-    def wait_for_port_pins_change(self, ps):
+    def wait_for_port_pins_change(self, ps:Sequence[str]) -> None:
         self.xsi._wait_for_port_pins_change(ps)
 
-    def wait_for_next_cycle(self):
+    def wait_for_next_cycle(self) -> None:
         self.xsi._wait_for_next_cycle()
 
-    def wait_until(self, t):
+    def wait_until(self, t:int) -> None:
         self.xsi._wait_until(t)
