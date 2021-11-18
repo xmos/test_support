@@ -90,6 +90,7 @@ def normalize_location(location):
     if result:
         fn = result.group(1)
         loca = result.group(2)
+        # print(fn, location)
     else:
         print("Unable to parse %s" % location)
     (filename, lineno) = loca.split(":")
@@ -174,8 +175,12 @@ def init_addr2line(coverage_files, coverage_lines, xcov_filename):
             init_coverage(addrs, location[0][1], location[1], location[0][0])
 
 
-def parse_disasm(line):
+def parse_disasm(line, lineno):
     def add_addr(tile, addr, asm):
+        if tile not in asm_coverage:
+            asm_coverage[tile] = {}
+        if addr not in asm_coverage[tile]:
+            asm_coverage[tile][addr] = []
         if tile not in addrs_in_tile:
             addrs_in_tile[tile] = {}
             addrs_in_tile[tile]["addr"] = []
@@ -183,6 +188,8 @@ def parse_disasm(line):
         # addrs_in_tile[tile].add(addr)
         addrs_in_tile[tile]["addr"].append(addr)
         addrs_in_tile[tile]["asm"].append(asm)
+        asm_coverage_hit = {lineno : ["not hit"]}
+        asm_coverage[tile][addr].append(asm_coverage_hit)
 
     global disasm_loadable
     global disasm_tile
@@ -240,6 +247,15 @@ def parse_trace(tracefile, coverage_lines):
                 coverage_lines[fileline]["asm_hits"] += 1
                 if addr in coverage_lines[fileline]["asm_addr"].keys():
                     coverage_lines[fileline]["asm_addr"][addr][0] += 1
+        #handle as_coverage
+        if tile in asm_coverage:
+            if addr in asm_coverage[tile]:
+                for i, asm_l in enumerate(asm_coverage[tile][addr]):
+                    # print(asm_coverage[tile][addr][i])
+                    for k, v in asm_l.items():
+                        asm_coverage[tile][addr][i][k] = "hit"
+                    # for key, value in asm_l.items():
+                    #     asm_coverage[tile][addr][key] = "hit"
 
     def find_par(codeline, addrs_list):
         merge_list = [[]]
@@ -385,11 +401,13 @@ def xcov_process(disasm, trace, xcov_filename):
 
     global node2jtag_node
     global addrs_in_tile
+    global asm_coverage
     global addr2line_in_tile
     global trace_cache
     global tile2elf_id
     node2jtag_node = {}
     addrs_in_tile = {}
+    asm_coverage = {}
     addr2line_in_tile = {}
     trace_cache = {}
     tile2elf_id = {}
@@ -416,9 +434,10 @@ def xcov_process(disasm, trace, xcov_filename):
         line = disasmfd.readline()
         lineno = 1
         while line:
-            parse_disasm(line)
+            parse_disasm(line, lineno)
             line = disasmfd.readline()
             lineno += 1
+    print(asm_coverage)
 
     # Populate addr2line lookup from the disassembly
     init_addr2line(coverage_files, coverage_lines, xcov_filename)
@@ -426,7 +445,7 @@ def xcov_process(disasm, trace, xcov_filename):
     print("Reading trace")
     parse_trace(trace, coverage_lines)
     print("End of reading trace")
-
+    print(asm_coverage)
     coverage = {}
     if coverage_files:
         # These may not be fully qualified pathnames so grab the ones from the list
