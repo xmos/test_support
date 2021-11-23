@@ -10,17 +10,48 @@ import multiprocessing
 import os
 import re
 import sys
+from pathlib import Path
 from typing import Sequence
+import subprocess
 
 from Pyxsim.xmostest_subprocess import call_get_output
 from . import pyxsim
 
 clean_only = False
 
+def cmake_build(xe_path, bin_child:str, env={}, board="XCORE-AI-EXPLORER"):
+    '''
+    Function for wrapping a CMake-based make and build process in Python test scripts
+    '''
+    print(f"Making {xe_path}")
+    # Work out the Makefile path
+    path = Path(xe_path).resolve()
+    
+    if not path:
+        msg = f"ERROR: Cannot determine path to make: {xe_path}\n"
+        sys.stderr.write(msg)
+        return (False, msg)
+
+    # Set cmakelists_path to the root of the test directory. We're assuming this
+    # is the parent of the directory named "bin".
+    splitpath = path.parts
+    bindex = splitpath.index("bin")
+    cmakelists_path = Path(*splitpath[:bindex])
+
+    # Copy the environment, to avoid modifying the env of the current shell
+    my_env = os.environ.copy()
+    for key in env:
+        my_env[key] = str(env[key])
+
+    make_cmd = ["cmake", "-B", f"bin/{bin_child}", f"-DBOARD={board}"]
+    build_cmd = ["cmake", "--build", f"bin/{bin_child}"]
+
+    subprocess.run(make_cmd, cwd=cmakelists_path, env=my_env, stdout=subprocess.DEVNULL)
+    subprocess.run(build_cmd, cwd=cmakelists_path, env=my_env, stdout=subprocess.DEVNULL)
 
 # This function is called automatically by the runners
 def _build(xe_path, build_config=None, env={}, do_clean=False, build_options=[]):
-
+    
     # Work out the Makefile path
     path = None
     m = re.match("(.*)/bin/(.*)", xe_path)
