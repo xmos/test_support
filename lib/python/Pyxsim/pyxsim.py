@@ -22,13 +22,16 @@ from Pyxsim.xmostest_subprocess import platform_is_windows
 
 ALL_BITS = 0xFFFFFF
 
+xcc_exec_prefix = os.environ["XCC_EXEC_PREFIX"]
+xcc_exec_prefix += "/" if not xcc_exec_prefix.endswith("/") else ""
+
 if platform_is_windows():
     xsi_lib_path = os.path.abspath(
-        os.environ["XCC_EXEC_PREFIX"] + "../lib/xsidevice.dll"
+        xcc_exec_prefix + "../lib/xsidevice.dll"
     )
 else:
     xsi_lib_path = os.path.abspath(
-        os.environ["XCC_EXEC_PREFIX"] + "../lib/libxsidevice.so"
+        xcc_exec_prefix + "../lib/libxsidevice.so"
     )
 
 xsi_lib = cdll.LoadLibrary(xsi_lib_path)
