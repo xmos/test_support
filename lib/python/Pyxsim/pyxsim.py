@@ -163,6 +163,10 @@ class SimThreadImpl(threading.Thread):
         vals = []
         ps = [(self._xsi.xe.get_port_pins(p)[0], parse_port(p)) for p in ps]
         for ((package, pin, _), (tile, p, bit, mask)) in ps:
+            if type(package) == str:
+                package = package.encode("ascii")
+            if type(pin) == str:
+                pin = pin.encode("ascii")
             d = self._xsi.is_pin_driving(package, pin)
             is_driving.append(d)
             if d:
@@ -176,6 +180,10 @@ class SimThreadImpl(threading.Thread):
         def _resume(xsi):
             for i, psval in enumerate(ps):
                 (package, pin, _), (tile, p, bit, mask) = psval
+                if type(package) == str:
+                    package = package.encode("ascii")
+                if type(pin) == str:
+                    pin = pin.encode("ascii")
                 d = xsi.is_pin_driving(package, pin)
                 if d != is_driving[i]:
                     return True
@@ -196,6 +204,10 @@ class SimThreadImpl(threading.Thread):
 
     def is_port_driving(self, port):
         (package, pin, _) = self._xsi.xe.get_port_pins(port)[0]
+        if type(package) == str:
+            package = package.encode("ascii")
+        if type(pin) == str:
+            pin = pin.encode("ascii")
         return self._xsi.is_pin_driving(package, pin)
 
     def drive_port_pins(self, port, val):
