@@ -40,8 +40,9 @@ def cmake_build(xe_path, bin_child:str, env={}, board="XCORE-AI-EXPLORER"):
 
     # Copy the environment, to avoid modifying the env of the current shell
     my_env = os.environ.copy()
-    for key in env:
-        my_env[key] = str(env[key])
+    if env:
+        for key in env:
+            my_env[key] = str(env[key])
 
     make_cmd = ["cmake", "-B", f"bin/{bin_child}", f"-DBOARD={board}"]
     build_cmd = ["cmake", "--build", f"bin/{bin_child}"]
