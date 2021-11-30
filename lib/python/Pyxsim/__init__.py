@@ -17,8 +17,6 @@ import subprocess
 from Pyxsim.xmostest_subprocess import call_get_output
 from . import pyxsim
 
-clean_only = False
-
 def cmake_build(xe_path, bin_child:str, env={}):
     '''
     Function for wrapping a CMake-based make and build process in Python test scripts
@@ -51,8 +49,7 @@ def cmake_build(xe_path, bin_child:str, env={}):
     subprocess.run(build_cmd, cwd=cmakelists_path, env=my_env, stdout=subprocess.DEVNULL)
 
 # This function is called automatically by the runners
-def _build(xe_path, build_config=None, env={}, do_clean=False, build_options=[]):
-    
+def _build(xe_path, build_config=None, env={}, do_clean=False, clean_only=False, build_options=[]):
     # Work out the Makefile path
     path = None
     m = re.match("(.*)/bin/(.*)", xe_path)
