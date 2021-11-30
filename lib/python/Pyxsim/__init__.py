@@ -45,7 +45,7 @@ def cmake_build(xe_path, bin_child:str, env={}, do_clean=False, clean_only=False
     build_cmd = ["cmake", "--build", f"bin/{bin_child}"]
 
     if clean_only:
-        build_cmd += ["target", "clean"]
+        build_cmd += ["--target", "clean"]
         do_clean = False
     if do_clean:
         build_cmd += ["--clean-first"]
