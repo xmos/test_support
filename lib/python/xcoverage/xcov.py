@@ -174,8 +174,12 @@ def init_addr2line(coverage_files, coverage_lines, xcov_filename):
             init_coverage(addrs, location[0][1], location[1], location[0][0])
 
 
-def parse_disasm(line):
+def parse_disasm(line, lineno):
     def add_addr(tile, addr, asm):
+        if tile not in asm_coverage:
+            asm_coverage[tile] = {}
+        if addr not in asm_coverage[tile]:
+            asm_coverage[tile][addr] = []
         if tile not in addrs_in_tile:
             addrs_in_tile[tile] = {}
             addrs_in_tile[tile]["addr"] = []
@@ -183,6 +187,8 @@ def parse_disasm(line):
         # addrs_in_tile[tile].add(addr)
         addrs_in_tile[tile]["addr"].append(addr)
         addrs_in_tile[tile]["asm"].append(asm)
+        asm_coverage_hit = {lineno: "not hit"}
+        asm_coverage[tile][addr].append(asm_coverage_hit)
 
     global disasm_loadable
     global disasm_tile
@@ -240,6 +246,12 @@ def parse_trace(tracefile, coverage_lines):
                 coverage_lines[fileline]["asm_hits"] += 1
                 if addr in coverage_lines[fileline]["asm_addr"].keys():
                     coverage_lines[fileline]["asm_addr"][addr][0] += 1
+        # handle as_coverage
+        if tile in asm_coverage:
+            if addr in asm_coverage[tile]:
+                for i, asm_l in enumerate(asm_coverage[tile][addr]):
+                    for k, v in asm_l.items():
+                        asm_coverage[tile][addr][i][k] = "hit"
 
     def find_par(codeline, addrs_list):
         merge_list = [[]]
@@ -371,7 +383,7 @@ def write_rtf(rtf, lines, src_hits):
 xcov_process description:
 This is the main function to be called in your test.
 It returns the average coverage and save the data in .xcov file in xcov dir.
-.xcov file is necessary for the below "xcov_combine" function.
+.xcov file is necessary for the method in "xcov_combine".
 
 @param disam: path to disasm file
 @param trace: path to trace file
@@ -381,15 +393,49 @@ It returns the average coverage and save the data in .xcov file in xcov dir.
 """
 
 
+def asm_cov(disasm, filepath):
+    # sorting lineno based on hit
+    hit_asm = []
+    nothit_asm = []
+    for tile in asm_coverage:
+        for addr in asm_coverage[tile]:
+            for i, asm_l in enumerate(asm_coverage[tile][addr]):
+                for k, v in asm_l.items():
+                    if v == "hit":
+                        hit_asm.append(k)
+                    else:
+                        nothit_asm.append(k)
+
+    coverage_asm = 100 * len(hit_asm) / (len(hit_asm) + len(nothit_asm))
+    with open(disasm, "r") as asm:
+        asm_fd = open(filepath, "w")
+        asm_fd.write("asm coverage is %f%%\n\n" % coverage_asm)
+        num_line = 1
+        for line in asm:
+            if num_line in hit_asm:
+                prefix = "%s" % ("{:10s}".format("hit"))
+            elif num_line in nothit_asm:
+                prefix = "%s" % ("{:10s}".format("not hit"))
+            else:
+                prefix = 10 * " "
+            asm_fd.write("%s: %s" % (prefix, line))
+            num_line += 1
+    print("asm coverage: %f%%" % coverage_asm)
+    asm_fd.close()
+    return coverage_asm
+
+
 def xcov_process(disasm, trace, xcov_filename):
 
     global node2jtag_node
     global addrs_in_tile
+    global asm_coverage
     global addr2line_in_tile
     global trace_cache
     global tile2elf_id
     node2jtag_node = {}
     addrs_in_tile = {}
+    asm_coverage = {}
     addr2line_in_tile = {}
     trace_cache = {}
     tile2elf_id = {}
@@ -416,7 +462,7 @@ def xcov_process(disasm, trace, xcov_filename):
         line = disasmfd.readline()
         lineno = 1
         while line:
-            parse_disasm(line)
+            parse_disasm(line, lineno)
             line = disasmfd.readline()
             lineno += 1
 
@@ -426,7 +472,8 @@ def xcov_process(disasm, trace, xcov_filename):
     print("Reading trace")
     parse_trace(trace, coverage_lines)
     print("End of reading trace")
-
+    cov_asm = disasm.replace(".dump", ".coverage")
+    asm_xcov = asm_cov(disasm, cov_asm)
     coverage = {}
     if coverage_files:
         # These may not be fully qualified pathnames so grab the ones from the list
@@ -486,6 +533,7 @@ class xcov_combine:
     Methods
     ----
     """
+
     def __init__(self):
         self.coverage = {}
 
@@ -519,7 +567,7 @@ class xcov_combine:
         files : list
             list of test file name
         coverage : dict
-            a dict to store the location of source code and line number and result 
+            a dict to store the location of source code and line number and result
 
         """
         for file in files:
@@ -591,7 +639,7 @@ class xcov_combine:
         logs_path : str
             a path to store the coverage files
         coverage : dict
-            a dict to store the location of source code and line number and result 
+            a dict to store the location of source code and line number and result
 
         """
         for (file, counts) in coverage.items():
@@ -652,6 +700,7 @@ class combine_process(xcov_combine):
     Methods
     -------
     """
+
     def __init__(self, testpath):
         self.result = {}
         self.tpath = testpath
