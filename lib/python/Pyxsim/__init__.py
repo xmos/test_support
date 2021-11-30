@@ -19,7 +19,7 @@ from . import pyxsim
 
 clean_only = False
 
-def cmake_build(xe_path, bin_child:str, env={}, board="XCORE-AI-EXPLORER"):
+def cmake_build(xe_path, bin_child:str, env={}):
     '''
     Function for wrapping a CMake-based make and build process in Python test scripts
     '''
@@ -44,7 +44,7 @@ def cmake_build(xe_path, bin_child:str, env={}, board="XCORE-AI-EXPLORER"):
         for key in env:
             my_env[key] = str(env[key])
 
-    make_cmd = ["cmake", "-B", f"bin/{bin_child}", f"-DBOARD={board}"]
+    make_cmd = ["cmake", "-B", f"bin/{bin_child}"]
     build_cmd = ["cmake", "--build", f"bin/{bin_child}"]
 
     subprocess.run(make_cmd, cwd=cmakelists_path, env=my_env, stdout=subprocess.DEVNULL)
