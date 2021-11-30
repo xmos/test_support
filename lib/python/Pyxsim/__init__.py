@@ -17,7 +17,7 @@ import subprocess
 from Pyxsim.xmostest_subprocess import call_get_output
 from . import pyxsim
 
-def cmake_build(xe_path, bin_child:str, env={}):
+def cmake_build(xe_path, bin_child:str, env={}, do_clean=False, clean_only=False):
     '''
     Function for wrapping a CMake-based make and build process in Python test scripts
     '''
@@ -28,7 +28,6 @@ def cmake_build(xe_path, bin_child:str, env={}):
     if not path:
         msg = f"ERROR: Cannot determine path to make: {xe_path}\n"
         sys.stderr.write(msg)
-        return (False, msg)
 
     # Set cmakelists_path to the root of the test directory. We're assuming this
     # is the parent of the directory named "bin".
@@ -44,6 +43,12 @@ def cmake_build(xe_path, bin_child:str, env={}):
 
     make_cmd = ["cmake", "-B", f"bin/{bin_child}"]
     build_cmd = ["cmake", "--build", f"bin/{bin_child}"]
+
+    if clean_only:
+        build_cmd += ["target", "clean"]
+        do_clean = False
+    if do_clean:
+        build_cmd += ["--clean-first"]
 
     subprocess.run(make_cmd, cwd=cmakelists_path, env=my_env, stdout=subprocess.DEVNULL)
     subprocess.run(build_cmd, cwd=cmakelists_path, env=my_env, stdout=subprocess.DEVNULL)
