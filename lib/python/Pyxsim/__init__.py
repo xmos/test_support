@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Sequence
 import subprocess
 
-from Pyxsim.xmostest_subprocess import call_get_output
+from .xmostest_subprocess import call_get_output
 from . import pyxsim
 
 clean_only = False
@@ -106,10 +106,13 @@ def _build(xe_path, build_config=None, env={}, do_clean=False, build_options=[])
     return (success, output)
 
 
-def do_run_pyxsim(xe, simargs, appargs, simthreads):
+def do_run_pyxsim(xe, simargs, appargs, simthreads, plugins=None):
     xsi = pyxsim.Xsi(xe_path=xe, simargs=simargs, appargs=appargs)
     for x in simthreads:
         xsi.register_simthread(x)
+    if plugins:
+        for plugin in plugins:
+            xsi.register_plugin(plugin)
     xsi.run()
     xsi.terminate()
 
@@ -120,10 +123,11 @@ def run_with_pyxsim(
     simargs=[],
     appargs=[],
     timeout=600,
+    plugins=[]
 ):
 
     p = multiprocessing.Process(
-        target=do_run_pyxsim, args=(xe, simargs, appargs, simthreads)
+        target=do_run_pyxsim, args=(xe, simargs, appargs, simthreads, plugins)
     )
     p.start()
     p.join(timeout=timeout)
