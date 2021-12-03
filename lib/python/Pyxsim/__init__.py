@@ -17,23 +17,37 @@ import subprocess
 from .xmostest_subprocess import call_get_output
 from . import pyxsim
 
-def cmake_build(xe_path, bin_child:str, env={}, do_clean=False, clean_only=False):
-    '''
-    Function for wrapping a CMake-based make and build process in Python test scripts
-    '''
-    print(f"Making {xe_path}")
-    # Work out the Makefile path
-    path = Path(xe_path).resolve()
-    
-    if not path:
-        msg = f"ERROR: Cannot determine path to make: {xe_path}\n"
-        sys.stderr.write(msg)
+# This function is called automatically by the runners
+def _build(xe_path, build_config=None, env={}, do_clean=False, clean_only=False, 
+            build_options=[], cmake=False, bin_child:str=None, silent=False):
 
-    # Set cmakelists_path to the root of the test directory. We're assuming this
-    # is the parent of the directory named "bin".
-    splitpath = path.parts
-    bindex = splitpath.index("bin")
-    cmakelists_path = Path(*splitpath[:bindex])
+    if cmake and not bin_child:
+        sys.stderr.write("ERROR: A name must be provided for the " +\
+                            "desired subdirectory of /bin/ for this build!")
+        return
+    
+    path = None
+    # Work out the Makefile path
+    if cmake:
+        # Set cmakelists_path to the root of the test directory. We're assuming this
+        # is the parent of the directory named "bin".
+        splitpath = Path(xe_path).resolve().parts
+        bindex = splitpath.index("bin")
+        path = Path(*splitpath[:bindex])
+    else:
+        m = re.match("(.*)/bin/(.*)", xe_path)
+        if m:
+            path = m.groups(0)[0]
+            binpath = m.groups(0)[1]
+            m = re.match("(.*)/(.*)", binpath)
+            if m:
+                build_config = m.groups(0)[0]
+
+    if not path:
+        msg = "ERROR: Cannot determine path to build: %s\n" % xe_path
+        sys.stderr.write(msg)
+        if not cmake:
+            return (False, msg)
 
     # Copy the environment, to avoid modifying the env of the current shell
     my_env = os.environ.copy()
@@ -41,71 +55,53 @@ def cmake_build(xe_path, bin_child:str, env={}, do_clean=False, clean_only=False
         for key in env:
             my_env[key] = str(env[key])
 
-    make_cmd = ["cmake", "-B", f"bin/{bin_child}"]
-    build_cmd = ["cmake", "--build", f"bin/{bin_child}"]
+    if cmake:
+        make_cmd = ["cmake", "-B", f"bin/{bin_child}"]
+        build_cmd = ["cmake", "--build", f"bin/{bin_child}"]
 
-    if clean_only:
-        build_cmd += ["--target", "clean"]
-        do_clean = False
-    if do_clean:
-        build_cmd += ["--clean-first"]
+        if clean_only:
+            build_cmd += ["--target", "clean"]
+            do_clean = False
+        if do_clean:
+            build_cmd += ["--clean-first"]
 
-    subprocess.run(make_cmd, cwd=cmakelists_path, env=my_env, stdout=subprocess.DEVNULL)
-    subprocess.run(build_cmd, cwd=cmakelists_path, env=my_env, stdout=subprocess.DEVNULL)
+        if silent:
+            output_args = {"stderr":subprocess.DEVNULL, "stdout":subprocess.DEVNULL}
+        else:
+            output_args = {"stderr":subprocess.STDOUT}
 
-# This function is called automatically by the runners
-def _build(xe_path, build_config=None, env={}, do_clean=False, clean_only=False, build_options=[]):
-    # Work out the Makefile path
-    path = None
-    m = re.match("(.*)/bin/(.*)", xe_path)
-    if m:
-        path = m.groups(0)[0]
-        binpath = m.groups(0)[1]
-        m = re.match("(.*)/(.*)", binpath)
-        if m:
-            build_config = m.groups(0)[0]
+        subprocess.run(make_cmd, cwd=path, env=my_env, **output_args)
+        subprocess.run(build_cmd, cwd=path, env=my_env, **output_args)
 
-    if not path:
-        msg = "ERROR: Cannot determine path to build: %s\n" % xe_path
-        sys.stderr.write(msg)
-        return (False, msg)
-
-    # Copy the environment, to avoid modifying the env of the current shell
-    my_env = os.environ.copy()
-    for key in env:
-        my_env[key] = str(env[key])
-
-    if clean_only:
-        cmd = ["xmake", "clean"]
-        do_clean = False
     else:
-        cmd = ["xmake", "all"]
+        if clean_only:
+            cmd = ["xmake", "clean"]
+            do_clean = False
+        else:
+            cmd = ["xmake", "all"]
+        if do_clean:
+            call_get_output(["xmake", "clean"], cwd=path, env=my_env)
+        if build_config is not None:
+            cmd += ["CONFIG=%s" % build_config]
+        cmd += build_options
+        output = call_get_output(cmd, cwd=path, env=my_env, merge_out_and_err=True)
 
-    if do_clean:
-        call_get_output(["xmake", "clean"], cwd=path, env=my_env)
+        success = True
+        if not silent:
+            for x in output:
+                s = str(x, "utf8")
+                if s.find("Error") != -1:
+                    success = False
+                if re.match(r"xmake: \*\*\* .* Stop.", s) is not None:
+                    success = False
 
-    if build_config is not None:
-        cmd += ["CONFIG=%s" % build_config]
+            if not success:
+                sys.stderr.write("ERROR: build failed.\n")
+                for x in output:
+                    s = str(x, "utf8")
+                    sys.stderr.write(s)
 
-    cmd += build_options
-
-    output = call_get_output(cmd, cwd=path, env=my_env, merge_out_and_err=True)
-
-    success = True
-    for x in output:
-        s = str(x, "utf8")
-        if s.find("Error") != -1:
-            success = False
-        if re.match(r"xmake: \*\*\* .* Stop.", s) is not None:
-            success = False
-
-    if not success:
-        sys.stderr.write("ERROR: build failed.\n")
-        for x in output:
-            s = str(x, "utf8")
-            sys.stderr.write(s)
-
-    return (success, output)
+        return (success, output)
 
 
 def do_run_pyxsim(xe, simargs, appargs, simthreads, plugins=None):
