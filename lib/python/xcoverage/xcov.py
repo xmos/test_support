@@ -99,9 +99,9 @@ def normalize_location(location):
     if filename in bad_source_files:
         return fn, fileline
     if not os.path.isfile(filename):
-        #mapping the unmapped/disordered filename
-        basename = os.path.basename(filename) 
-        rootdir = os.environ['XMOS_ROOT']
+        # mapping the unmapped/disordered filename
+        basename = os.path.basename(filename)
+        rootdir = os.environ["XMOS_ROOT"]
         flag = False
         for subdir, dirs, files in os.walk(rootdir):
             for file in files:
@@ -831,6 +831,7 @@ class combine_process(xcov_combine):
         """
         logp = os.path.join(self.tpath, "result")
         self.generate_coverage(logp, self.result)
+        self.close_fd()
 
     def do_combine_test(self, specified_test=set([])):
         """
