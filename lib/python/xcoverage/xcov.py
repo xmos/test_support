@@ -99,8 +99,22 @@ def normalize_location(location):
     if filename in bad_source_files:
         return fn, fileline
     if not os.path.isfile(filename):
-        bad_source_files.add(filename)
-        return fn, fileline
+        #looking for unmapped/disordered filename
+        basename = os.path.basename(filename) 
+        rootdir = os.environ['XMOS_ROOT']
+        flag = False
+        for subdir, dirs, files in os.walk(rootdir):
+            for file in files:
+                if file == basename:
+                    flag = True
+                    filename = os.path.join(subdir, file)
+                    fileline = "%s:%s" % (filename, lineno)
+                    break
+            if flag:
+                break
+        if not flag:
+            bad_source_files.add(filename)
+            return fn, fileline
     source_files.add(filename)
 
     return fn, fileline
