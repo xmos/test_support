@@ -251,7 +251,7 @@ class Xsi:
         self._simthreads = []
         self._time = 0
         self.xe = Xe(self.xe_path)
-        self._time_step = 1000.0 / self.xe.freq
+        self._time_step = 1000000.0 / self.xe.freq
 
     def register_plugin(self, plugin):
         self._plugins.append(plugin)
