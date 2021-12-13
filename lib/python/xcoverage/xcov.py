@@ -99,7 +99,7 @@ def normalize_location(location):
     if filename in bad_source_files:
         return fn, fileline
     if not os.path.isfile(filename):
-        #looking for unmapped/disordered filename
+        #mapping the unmapped/disordered filename
         basename = os.path.basename(filename) 
         rootdir = os.environ['XMOS_ROOT']
         flag = False
