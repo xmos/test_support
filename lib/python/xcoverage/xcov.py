@@ -22,7 +22,7 @@ RTF_header = """{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Courier;}}
 \\fs25 Green -> compiled and executed | Red -> compiled but not executed | GRAY -> not expected to be hit (NE) or not be compiled\\line
 \\line
 """
-
+mapped_source_files = {}
 disasm_loadable = None
 disasm_tile = None
 disasm_node = None
@@ -98,6 +98,9 @@ def normalize_location(location):
     fileline = "%s:%s" % (filename, lineno)
     if filename in bad_source_files:
         return fn, fileline
+    if filename in mapped_source_files:
+        fileline = "%s:%s" % (mapped_source_files[filename], lineno)
+        return fn, fileline
     if not os.path.isfile(filename):
         # mapping the unmapped/disordered filename
         basename = os.path.basename(filename)
@@ -107,7 +110,9 @@ def normalize_location(location):
             for file in files:
                 if file == basename:
                     flag = True
+                    bad_filename = filename
                     filename = os.path.join(subdir, file)
+                    mapped_source_files[bad_filename] = filename
                     fileline = "%s:%s" % (filename, lineno)
                     break
             if flag:
