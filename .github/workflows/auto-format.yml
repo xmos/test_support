@@ -13,6 +13,6 @@ jobs:
         with:
           file-extensions:  |
             c h cpp py
-          exclude-dirs: "./third-party ./utils/lib_flexbuffers"
+          exclude-dirs:
           c-style: llvm
           token: ${{ secrets.GITHUB_TOKEN }}
