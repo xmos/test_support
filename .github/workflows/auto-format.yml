@@ -1,7 +1,5 @@
 name: Auto-format
-on:
-  issue_comment:
-    types: [created]
+on: [push]
 jobs:
   apply-formatting:
     if: ${{ github.event.issue.pull_request }}
