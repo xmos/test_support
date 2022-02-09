@@ -99,17 +99,12 @@ def normalize_location(location, excluded_file):
     if filename in excluded_files:
         fileline = "??:%s" % (lineno)
         return fn, fileline
-    for excludefile in excluded_file:
-        result_ex = re.search(excludefile, filename)
-        if result_ex:
-            fileline = "??:%s" % (lineno)
-            print("ignore file: %s" % filename)
-            excluded_files.add(filename)
-            return fn, fileline
     if filename in bad_source_files:
         return fn, fileline
     if filename in mapped_source_files:
         fileline = "%s:%s" % (mapped_source_files[filename], lineno)
+        return fn, fileline
+    if filename in source_files:
         return fn, fileline
     if not os.path.isfile(filename):
         # mapping the unmapped/disordered filename
@@ -130,6 +125,17 @@ def normalize_location(location, excluded_file):
         if not flag:
             bad_source_files.add(filename)
             return fn, fileline
+            
+    # search for excluded file
+    for excludefile in excluded_file:
+        result_ex = re.search(excludefile, filename)
+        if result_ex:
+            fileline = "??:%s" % (lineno)
+            print("ignore file: %s" % filename)
+            excluded_files.add(filename)
+            return fn, fileline
+
+
     source_files.add(filename)
 
     return fn, fileline
