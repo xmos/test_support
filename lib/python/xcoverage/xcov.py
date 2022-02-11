@@ -85,7 +85,7 @@ def generate_elf_disasm(binary, split_dir, disasm):
 # the elf file!
 
 
-def normalize_location(location):
+def normalize_location(location, excluded_file):
     result = XADDR_RE.match(location)
     if result:
         fn = result.group(1)
@@ -96,10 +96,15 @@ def normalize_location(location):
     if "/" in filename or filename.startswith("../"):
         filename = os.path.abspath(filename)
     fileline = "%s:%s" % (filename, lineno)
+    if filename in excluded_files:
+        fileline = "??:%s" % (lineno)
+        return fn, fileline
     if filename in bad_source_files:
         return fn, fileline
     if filename in mapped_source_files:
         fileline = "%s:%s" % (mapped_source_files[filename], lineno)
+        return fn, fileline
+    if filename in source_files:
         return fn, fileline
     if not os.path.isfile(filename):
         # mapping the unmapped/disordered filename
@@ -120,13 +125,24 @@ def normalize_location(location):
         if not flag:
             bad_source_files.add(filename)
             return fn, fileline
+            
+    # search for excluded file
+    for excludefile in excluded_file:
+        result_ex = re.search(excludefile, filename)
+        if result_ex:
+            fileline = "??:%s" % (lineno)
+            print("ignore file: %s" % filename)
+            excluded_files.add(filename)
+            return fn, fileline
+
+
     source_files.add(filename)
 
     return fn, fileline
 
 
 # Use xaddr2line to map the memory addresses to source line numbers
-def init_addr2line(coverage_files, coverage_lines, xcov_filename):
+def init_addr2line(coverage_files, coverage_lines, xcov_filename, excluded_file):
     def update_coverage(addrs, fileline, coverage_lines, asm, fn):
         xaddress = {addrs: [0, asm, fn]}
         if fileline not in coverage_lines:
@@ -185,7 +201,7 @@ def init_addr2line(coverage_files, coverage_lines, xcov_filename):
                 print(
                     "Error len addrs %d results %d" % (len(addrs_subset), len(results))
                 )
-            locations = [normalize_location(location) for location in results]
+            locations = [normalize_location(location, excluded_file) for location in results]
             locations = list(zip(locations, asm_subset))
             addr2line_in_tile[tile].update(dict(zip(addrs_subset, locations)))
 
@@ -444,7 +460,7 @@ def asm_cov(disasm, filepath):
     return coverage_asm
 
 
-def xcov_process(disasm, trace, xcov_filename):
+def xcov_process(disasm, trace, xcov_filename, excluded_file=[]):
 
     global node2jtag_node
     global addrs_in_tile
@@ -464,6 +480,8 @@ def xcov_process(disasm, trace, xcov_filename):
     # Set of source files which do not exist
     global bad_source_files
     bad_source_files = set()
+    global excluded_files
+    excluded_files = set()
 
     coverage_lines = {}
 
@@ -486,7 +504,7 @@ def xcov_process(disasm, trace, xcov_filename):
             lineno += 1
 
     # Populate addr2line lookup from the disassembly
-    init_addr2line(coverage_files, coverage_lines, xcov_filename)
+    init_addr2line(coverage_files, coverage_lines, xcov_filename, excluded_file)
 
     print("Reading trace")
     parse_trace(trace, coverage_lines)
