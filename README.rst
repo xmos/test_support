@@ -43,12 +43,12 @@ xcov_process(disasm, trace, xcov_dir).
 ``xcov_combine``
 .......................
 
-see example in test/test_xcoverage
+see example in examples/code_coverage
 
 ``combine_process``
 .......................
 
-see example in test/test_xcoverage
+see example in examples/code_coverage
 
 ``Mark the source code as not expected to be hit``
 ........................................................
@@ -56,6 +56,12 @@ see example in test/test_xcoverage
 Add a comment "//NE" beside you source code. It wouldn't be counted in coverage.
 
 see example in test/test_xcoverage
+
+``Excluded File``
+........................................................
+Passing an excluded_file arg in xcov_process(), eg:
+
+xcov_process(disasm, trace, xcov_dir, excluded_file=["/tests/shared/test_main.xc","/tests/shared/shared.h" ])
 
 Software version and dependencies
 .................................
