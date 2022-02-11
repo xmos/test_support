@@ -14,7 +14,7 @@ def build_xe(xe, clean=False):
     cmd += "CONFIG=%s " % build_config
     ps.run(cmd, shell=True, check=True)
 
-def test_xcoverage():
+def code_coverage():
 
     #define xcov_combine and combine_proccess
     xcov_comb = xcov_combine()
@@ -48,4 +48,4 @@ def test_xcoverage():
     combine_test.remove_tmp_testresult(combine_test.tpath)
 
 if __name__ == "__main__":
-    test_xcoverage()
+    code_coverage()
