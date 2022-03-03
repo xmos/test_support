@@ -10,7 +10,6 @@ use File::Copy;
 use File::Path;
 use XmosBuildLib;
 use XmosArg;
-use Carp;
 
 my $xmosArg;
 
