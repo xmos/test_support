@@ -16,6 +16,8 @@ DISASM_RE = re.compile(".*0x([0-9a-fA-F]*): .*: \s*(\w*) \(.*")
 TRACE_RE = re.compile("tile\[([0-9]*)\]@([0-9]).*--.-\.*([0-9a-fA-F]*) \((.*)\) : (.*)")
 XADDR_RE = re.compile("(.*) at (.*)")
 NE_RE = re.compile(".*//[ ]*NOCOVER")
+NCS = re.compile(".*//[ ]*NOCOVERSTART")
+NCE = re.compile(".*//[ ]*NOCOVEREND")
 RTF_header = """{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Courier;}}
 {\\colortbl;\\red0\\green0\\blue255;\\red255\\green0\\blue0;\\red11\\green102\\blue20;\\red170\\green165\\blue165;}
 \\paperw23811\\paperh16838\\margl720\\margr720\\margt720\\margb720
@@ -645,11 +647,25 @@ class xcov_combine:
         wt = open("tmp_testresult_%d.txt" % pid, "w+")
 
         for filename in coverage:
+            nc_commented = 0
+            ne_list = []
+            src_file = open(filename, "r")
+            src_line = src_file.readlines()
+            linenum = 0
+            for liness in src_line:
+                m = NE_RE.match(liness)
+                nocover_started = NCS.match(liness)
+                nocover_end = NCE.match(liness)
+                if nocover_started:
+                    nc_commented = 1
+                if nocover_end:
+                    nc_commented = 0
+                    ne_list.append(linenum)
+                if m or nc_commented:
+                    ne_list.append(linenum)
+                linenum += 1
             for lineno in coverage[filename]:
-                src_file = open(filename, "r")
-                src_line = src_file.readlines()
-                m = NE_RE.match(src_line[int(lineno - 1)])
-                if m:
+                if (lineno - 1) in ne_list:
                     wt.write("%s:%d:%s\n" % (filename, lineno, "NE"))
                 else:
                     wt.write(

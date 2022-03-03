@@ -53,7 +53,7 @@ see example in examples/code_coverage
 ``Mark the source code as not expected to be hit``
 ........................................................
 
-Add a comment "//NE" beside you source code. It wouldn't be counted in coverage.
+Add a comment "//NOCOVER" or "//NOCOVERSTART" and "//NOCOVEREND" beside you source code. It wouldn't be counted in coverage.
 
 see example in test/test_xcoverage
 
