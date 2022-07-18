@@ -54,3 +54,5 @@ dkms.conf
 # Tmp files
 *.*~
 *~
+**/__pycache__/
+test_support.egg-info/
