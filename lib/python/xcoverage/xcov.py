@@ -1,4 +1,4 @@
-# Copyright 2016-2021 XMOS LIMITED.
+# Copyright 2016-2022 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import os
 import shutil
@@ -15,14 +15,16 @@ LOADABLE_RE = re.compile(
 DISASM_RE = re.compile(".*0x([0-9a-fA-F]*): .*: \s*(\w*) \(.*")
 TRACE_RE = re.compile("tile\[([0-9]*)\]@([0-9]).*--.-\.*([0-9a-fA-F]*) \((.*)\) : (.*)")
 XADDR_RE = re.compile("(.*) at (.*)")
-NE_RE = re.compile(".*//[ ]*NE")
+NE_RE = re.compile(".*//[ ]*NOCOVER")
+NCS = re.compile(".*//[ ]*NOCOVERSTART")
+NCE = re.compile(".*//[ ]*NOCOVEREND")
 RTF_header = """{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Courier;}}
 {\\colortbl;\\red0\\green0\\blue255;\\red255\\green0\\blue0;\\red11\\green102\\blue20;\\red170\\green165\\blue165;}
 \\paperw23811\\paperh16838\\margl720\\margr720\\margt720\\margb720
 \\fs25 Green -> compiled and executed | Red -> compiled but not executed | GRAY -> not expected to be hit (NE) or not be compiled\\line
 \\line
 """
-
+mapped_source_files = {}
 disasm_loadable = None
 disasm_tile = None
 disasm_node = None
@@ -85,7 +87,7 @@ def generate_elf_disasm(binary, split_dir, disasm):
 # the elf file!
 
 
-def normalize_location(location):
+def normalize_location(location, excluded_file):
     result = XADDR_RE.match(location)
     if result:
         fn = result.group(1)
@@ -96,18 +98,53 @@ def normalize_location(location):
     if "/" in filename or filename.startswith("../"):
         filename = os.path.abspath(filename)
     fileline = "%s:%s" % (filename, lineno)
+    if filename in excluded_files:
+        fileline = "??:%s" % (lineno)
+        return fn, fileline
     if filename in bad_source_files:
         return fn, fileline
-    if not os.path.isfile(filename):
-        bad_source_files.add(filename)
+    if filename in mapped_source_files:
+        fileline = "%s:%s" % (mapped_source_files[filename], lineno)
         return fn, fileline
+    if filename in source_files:
+        return fn, fileline
+    if not os.path.isfile(filename):
+        # mapping the unmapped/disordered filename
+        basename = os.path.basename(filename)
+        rootdir = os.environ["XMOS_ROOT"]
+        flag = False
+        for subdir, dirs, files in os.walk(rootdir):
+            for file in files:
+                if file == basename:
+                    flag = True
+                    bad_filename = filename
+                    filename = os.path.join(subdir, file)
+                    mapped_source_files[bad_filename] = filename
+                    fileline = "%s:%s" % (filename, lineno)
+                    break
+            if flag:
+                break
+        if not flag:
+            bad_source_files.add(filename)
+            return fn, fileline
+            
+    # search for excluded file
+    for excludefile in excluded_file:
+        result_ex = re.search(excludefile, filename)
+        if result_ex:
+            fileline = "??:%s" % (lineno)
+            print("ignore file: %s" % filename)
+            excluded_files.add(filename)
+            return fn, fileline
+
+
     source_files.add(filename)
 
     return fn, fileline
 
 
 # Use xaddr2line to map the memory addresses to source line numbers
-def init_addr2line(coverage_files, coverage_lines, xcov_filename):
+def init_addr2line(coverage_files, coverage_lines, xcov_filename, excluded_file):
     def update_coverage(addrs, fileline, coverage_lines, asm, fn):
         xaddress = {addrs: [0, asm, fn]}
         if fileline not in coverage_lines:
@@ -166,7 +203,7 @@ def init_addr2line(coverage_files, coverage_lines, xcov_filename):
                 print(
                     "Error len addrs %d results %d" % (len(addrs_subset), len(results))
                 )
-            locations = [normalize_location(location) for location in results]
+            locations = [normalize_location(location, excluded_file) for location in results]
             locations = list(zip(locations, asm_subset))
             addr2line_in_tile[tile].update(dict(zip(addrs_subset, locations)))
 
@@ -425,7 +462,7 @@ def asm_cov(disasm, filepath):
     return coverage_asm
 
 
-def xcov_process(disasm, trace, xcov_filename):
+def xcov_process(disasm, trace, xcov_filename, excluded_file=[]):
 
     global node2jtag_node
     global addrs_in_tile
@@ -445,6 +482,8 @@ def xcov_process(disasm, trace, xcov_filename):
     # Set of source files which do not exist
     global bad_source_files
     bad_source_files = set()
+    global excluded_files
+    excluded_files = set()
 
     coverage_lines = {}
 
@@ -467,7 +506,7 @@ def xcov_process(disasm, trace, xcov_filename):
             lineno += 1
 
     # Populate addr2line lookup from the disassembly
-    init_addr2line(coverage_files, coverage_lines, xcov_filename)
+    init_addr2line(coverage_files, coverage_lines, xcov_filename, excluded_file)
 
     print("Reading trace")
     parse_trace(trace, coverage_lines)
@@ -608,11 +647,25 @@ class xcov_combine:
         wt = open("tmp_testresult_%d.txt" % pid, "w+")
 
         for filename in coverage:
+            nc_commented = 0
+            ne_list = []
+            src_file = open(filename, "r")
+            src_line = src_file.readlines()
+            linenum = 0
+            for liness in src_line:
+                m = NE_RE.match(liness)
+                nocover_started = NCS.match(liness)
+                nocover_end = NCE.match(liness)
+                if nocover_started:
+                    nc_commented = 1
+                if nocover_end:
+                    nc_commented = 0
+                    ne_list.append(linenum)
+                if m or nc_commented:
+                    ne_list.append(linenum)
+                linenum += 1
             for lineno in coverage[filename]:
-                src_file = open(filename, "r")
-                src_line = src_file.readlines()
-                m = NE_RE.match(src_line[int(lineno - 1)])
-                if m:
+                if (lineno - 1) in ne_list:
                     wt.write("%s:%d:%s\n" % (filename, lineno, "NE"))
                 else:
                     wt.write(
@@ -817,6 +870,7 @@ class combine_process(xcov_combine):
         """
         logp = os.path.join(self.tpath, "result")
         self.generate_coverage(logp, self.result)
+        self.close_fd()
 
     def do_combine_test(self, specified_test=set([])):
         """

@@ -1,4 +1,4 @@
-# Copyright 2016-2021 XMOS LIMITED.
+# Copyright 2016-2022 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 from ctypes import (
@@ -266,7 +266,7 @@ class Xsi:
         self._simthreads = []
         self._time = 0
         self.xe = Xe(self.xe_path)
-        self._time_step = 1000000.0 / self.xe.freq
+        self._time_step = 1000000000.0 / self.xe.freq #time-step in fs
 
     def register_plugin(self, plugin):
         self._plugins.append(plugin)
