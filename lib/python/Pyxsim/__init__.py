@@ -1,4 +1,4 @@
-# Copyright 2016-2021 XMOS LIMITED.
+# Copyright 2016-2022 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 """
 Pyxsim pytest framework
@@ -13,11 +13,17 @@ import sys
 
 from Pyxsim.xmostest_subprocess import call_get_output
 from . import pyxsim
-import Pyxsim
 
 
 # This function is called automatically by the runners
-def _build(xe_path, build_config=None, env={}, do_clean=False, clean_only= False, build_options=[]):
+def _build(
+    xe_path,
+    build_config=None,
+    env={},
+    do_clean=False,
+    clean_only=False,
+    build_options=[],
+):
 
     # Work out the Makefile path
     path = None
@@ -73,15 +79,14 @@ def _build(xe_path, build_config=None, env={}, do_clean=False, clean_only= False
 
 
 def run_on_simulator_(xe, tester=None, simthreads=[], **kwargs):
-    
-    do_xe_prebuild = kwargs.get('do_xe_prebuild', False)
-    capfd = kwargs.get('capfd', None)
-    kwargs.pop("capfd")
+
+    do_xe_prebuild = kwargs.get("do_xe_prebuild", False)
+    capfd = kwargs.pop("capfd", None)
 
     if do_xe_prebuild:
-        build_env = kwargs.get('build_env', {})
-        do_clean = kwargs.get('clean_before_build', False)
-        build_success, build_output = _build(xe, env = build_env, do_clean = do_clean)
+        build_env = kwargs.get("build_env", {})
+        do_clean = kwargs.get("clean_before_build", False)
+        build_success, build_output = _build(xe, env=build_env, do_clean=do_clean)
 
         if not build_success:
             return False
@@ -90,21 +95,22 @@ def run_on_simulator_(xe, tester=None, simthreads=[], **kwargs):
         if k in kwargs:
             kwargs.pop(k)
 
-    Pyxsim.run_with_pyxsim(xe, simthreads, tester, **kwargs)
+    run_with_pyxsim(xe, simthreads, tester, **kwargs)
 
     if tester and capfd:
         cap_output, err = capfd.readouterr()
         output = cap_output.split("\n")
-        output =  [x.strip() for x in output if x != ""]
+        output = [x.strip() for x in output if x != ""]
         result = tester.run(output)
-        return result 
+        return result
 
     return True
 
+
 def run_on_simulator(*args, **kwargs):
 
-    kwargs['do_xe_prebuild'] = True
-   
+    kwargs["do_xe_prebuild"] = True
+
     result = run_on_simulator_(*args, **kwargs)
 
     return result
@@ -121,7 +127,6 @@ def do_run_pyxsim(xe, simargs, appargs, simthreads):
 def run_with_pyxsim(
     xe,
     simthreads,
-    tester,
     simargs=[],
     appargs=[],
     timeout=600,
