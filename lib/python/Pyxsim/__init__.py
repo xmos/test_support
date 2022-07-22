@@ -95,7 +95,7 @@ def run_on_simulator_(xe, tester=None, simthreads=[], **kwargs):
         if k in kwargs:
             kwargs.pop(k)
 
-    run_with_pyxsim(xe, simthreads, tester, **kwargs)
+    run_with_pyxsim(xe, simthreads, **kwargs)
 
     if tester and capfd:
         cap_output, err = capfd.readouterr()
