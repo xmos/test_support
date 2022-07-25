@@ -130,13 +130,34 @@ def run_with_pyxsim(
     simargs=[],
     appargs=[],
     timeout=600,
+    tracing=False,
 ):
+
+    if tracing:
+
+        log_dir = "logs"
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+
+        log_filename = os.path.splitext(os.path.basename(xe))[0]
+
+        log_filename = os.path.join(log_dir, f"xsim_trace_{log_filename}.txt")
+
+        simargs += [
+            "--trace-to",
+            log_filename,
+            "--enable-fnop-tracing",
+        ]
+
+        sys.stderr.write(str(simargs))
+
     p = multiprocessing.Process(
         target=do_run_pyxsim, args=(xe, simargs, appargs, simthreads)
     )
     p.start()
     p.join(timeout=timeout)
     if p.is_alive():
+        assert 0
         sys.stderr.write("Simulator timed out\n")
         p.terminate()
 
