@@ -1,4 +1,4 @@
-# Copyright 2016-2021 XMOS LIMITED.
+# Copyright 2016-2022 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import re
 import sys
@@ -26,13 +26,6 @@ class ComparisonTester:
      :param golden:   The expected data to compare the output against.
                       Can be a list of strings, a string split on new lines,
                       or a file to read.
-     :param product:  The name of the product that is being
-                      tested e.g. 'lib_uart'
-     :param group:    The group that the test belongs to
-     :param test:     The name of the test
-     :param config:   A dictionary representing the configuration of the test.
-     :param env:      A dictionary representing the environment the test was
-                      run under.
      :param regexp:   A bool that controls whether the expect lines are treated
                       as regular expressions or not.
      :param ignore:   A list of regular expressions to ignore
@@ -43,18 +36,11 @@ class ComparisonTester:
     def __init__(
         self,
         golden,
-        product,
-        group,
-        test,
-        config={},
-        env={},
         regexp=False,
         ignore=[],
         ordered=True,
     ):
-        # self.register_test(product, group, test, config)
         self._golden = golden
-        self._test = (product, group, test, config, env)
         self._regexp = regexp
         self._ignore = ignore
         self._ordered = ordered
@@ -71,7 +57,6 @@ class ComparisonTester:
 
     def run(self, output):
         golden = self._golden
-        (_product, _group, test, config, _env) = self._test
         regexp = self._regexp
         if isinstance(golden, list):
             expected = golden
@@ -146,14 +131,8 @@ class ComparisonTester:
             output["failures"] = "".join(self.failures)
 
         if self.result:
-            sys.stdout.write(
-                "%-30s %-6s %-6s Pass\n"
-                % (test, config.get("arch"), config.get("speed"))
-            )
+            sys.stdout.write("Pass\n")
         else:
-            sys.stderr.write(
-                "%-30s %-6s %-6s Fail\n"
-                % (test, config.get("arch"), config.get("speed"))
-            )
+            sys.stderr.write("Fail\n")
 
         return self.result
