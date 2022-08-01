@@ -130,26 +130,35 @@ def run_with_pyxsim(
     simargs=[],
     appargs=[],
     timeout=600,
-    tracing=False,
+    instTracing=False,
+    vcdTracing=False,
 ):
-
-    if tracing:
+    if instTracing or vcdTracing:
 
         log_dir = "logs"
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
 
         log_filename = os.path.splitext(os.path.basename(xe))[0]
+        log_filename = os.path.join(log_dir, f"xsim_trace_{log_filename}")
 
-        log_filename = os.path.join(log_dir, f"xsim_trace_{log_filename}.txt")
+    if instTracing:
 
         simargs += [
             "--trace-to",
-            log_filename,
+            log_filename + ".txt",
             "--enable-fnop-tracing",
         ]
 
-        sys.stderr.write(str(simargs))
+    if vcdTracing:
+
+        vcd_args = "-o {0}.vcd".format(log_filename)
+        vcd_args += (
+            " -tile tile[0] -ports -ports-detailed -instructions"
+            " -functions -cycles -clock-blocks -pads -cores -usb"
+        )
+
+        simargs += ["--vcd-tracing", vcd_args]
 
     p = multiprocessing.Process(
         target=do_run_pyxsim, args=(xe, simargs, appargs, simthreads)
