@@ -87,7 +87,9 @@ def run_on_simulator_(xe, tester=None, simthreads=[], **kwargs):
         build_env = kwargs.get("build_env", {})
         do_clean = kwargs.get("clean_before_build", False)
         build_options = kwargs.pop("build_options", [])
-        build_success, build_output = _build(xe, env=build_env, do_clean=do_clean, build_options=build_options)
+        build_success, build_output = _build(
+            xe, env=build_env, do_clean=do_clean, build_options=build_options
+        )
 
         if not build_success:
             return False

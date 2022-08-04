@@ -6,6 +6,7 @@ import pytest
 import sys
 import os
 
+
 def build_xe(xe, clean=False):
     build_config = xe
     cmd = "xmake "
@@ -14,9 +15,10 @@ def build_xe(xe, clean=False):
     cmd += "CONFIG=%s " % build_config
     ps.run(cmd, shell=True, check=True)
 
+
 def code_coverage():
 
-    #define xcov_combine and combine_proccess
+    # define xcov_combine and combine_proccess
     xcov_comb = xcov_combine()
     combine_test = combine_process(os.path.dirname(os.path.abspath(__file__)))
 
@@ -27,25 +29,26 @@ def code_coverage():
     disasm = f"bin/demo/{xe_bin}.dump"
     tracefile = f"bin/demo/trace.txt"
 
-    #build xe and generate disassembly file
+    # build xe and generate disassembly file
     build_xe("demo", clean=False)
     print(binary)
     print(split_dir)
     print(disasm)
     generate_elf_disasm(binary, split_dir, disasm)
 
-    #run xsim
+    # run xsim
     ps.run("xsim --trace-to %s %s" % (tracefile, binary), shell=True)
 
-    #run code coverage calculation
+    # run code coverage calculation
     coverage = xcov_process(disasm, tracefile, split_dir)
-    #run coverage result combine for each source file
+    # run coverage result combine for each source file
     xcov_comb.run_combine(split_dir)
-    #merge cobined result over different process
+    # merge cobined result over different process
     coverage = combine_test.do_combine_test()
     combine_test.generate_merge_src()
     # teardowm - remove tmp file
     combine_test.remove_tmp_testresult(combine_test.tpath)
+
 
 if __name__ == "__main__":
     code_coverage()
