@@ -119,20 +119,31 @@ def _build(
 
 def run_on_simulator_(xe, tester=None, simthreads=[], **kwargs):
 
-    do_xe_prebuild = kwargs.get("do_xe_prebuild", False)
+    do_xe_prebuild = kwargs.pop("do_xe_prebuild", False)
     capfd = kwargs.pop("capfd", None)
 
     if do_xe_prebuild:
-        build_env = kwargs.get("build_env", {})
-        do_clean = kwargs.get("clean_before_build", False)
-        build_success, build_output = _build(xe, env=build_env, do_clean=do_clean)
+        build_env = kwargs.pop("build_env", {})
+        build_config = kwargs.pop("build_config", None)
+        do_clean = kwargs.pop("clean_before_build", False)
+        binary_child = kwargs.pop("binary_child", None)
+        clean_only = kwargs.pop("clean_only", False)
+        silent = kwargs.pop("silent", None)
+        cmake = kwargs.pop("cmake", None)
+        build_options = kwargs.pop("build_options", None)
+
+        build_success, build_output = _build(xe,
+                                             build_config=build_config,
+                                             env=build_env,
+                                             do_clean=do_clean,
+                                             clean_only=clean_only,
+                                             build_options=build_options,
+                                             cmake=cmake,
+                                             binary_child=binary_child,
+                                             silent=silent)
 
         if not build_success:
             return False
-
-    for k in ["do_xe_prebuild", "build_env", "clean_before_build"]:
-        if k in kwargs:
-            kwargs.pop(k)
 
     run_with_pyxsim(xe, simthreads, **kwargs)
 
@@ -209,7 +220,6 @@ def run_with_pyxsim(
     p.start()
     p.join(timeout=timeout)
     if p.is_alive():
-        assert 0 # Why is this here? Following two lines become unreachable
         sys.stderr.write("Simulator timed out\n")
         p.terminate()
 
