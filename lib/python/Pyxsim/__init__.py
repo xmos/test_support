@@ -130,7 +130,7 @@ def run_on_simulator_(xe, tester=None, simthreads=[], **kwargs):
         clean_only = kwargs.pop("clean_only", False)
         silent = kwargs.pop("silent", None)
         cmake = kwargs.pop("cmake", None)
-        build_options = kwargs.pop("build_options", None)
+        build_options = kwargs.pop("build_options", [])
 
         build_success, build_output = _build(xe,
                                              build_config=build_config,
