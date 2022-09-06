@@ -311,8 +311,8 @@ class Xsi:
         XsiStatus.error_if_not_valid(status)
 
     def sample_pin(self, package, pin):
-        c_package = c_char_p(package)
-        c_pin = c_char_p(pin)
+        c_package = c_char_p(package.encode("utf-8"))
+        c_pin = c_char_p(pin.encode("utf-8"))
         c_value = c_int()
         status = xsi_lib.xsi_sample_pin(self.xsim, c_package, c_pin, byref(c_value))
         XsiStatus.error_if_not_valid(status)
@@ -330,8 +330,8 @@ class Xsi:
         return c_value.value
 
     def drive_pin(self, package, pin, value):
-        c_package = c_char_p(package)
-        c_pin = c_char_p(pin)
+        c_package = c_char_p(package.encode("utf-8"))
+        c_pin = c_char_p(pin.encode("utf-8"))
         c_value = c_int(value)
         status = xsi_lib.xsi_drive_pin(self.xsim, c_package, c_pin, c_value)
         XsiStatus.error_if_not_valid(status)
@@ -368,16 +368,16 @@ class Xsi:
         return c_value.value
 
     def is_pin_driving(self, package, pin):
-        c_package = c_char_p(package)
-        c_pin = c_char_p(pin)
+        c_package = c_char_p(package.encode("utf-8"))
+        c_pin = c_char_p(pin.encode("utf-8"))
         c_value = c_int()
         status = xsi_lib.xsi_is_pin_driving(self.xsim, c_package, c_pin, byref(c_value))
         XsiStatus.error_if_not_valid(status)
         return c_value.value
 
     def is_port_pins_driving(self, tile, port):
-        c_tile = c_char_p(tile)
-        c_port = c_char_p(port)
+        c_tile = c_char_p(tile.encode("utf-8"))
+        c_port = c_char_p(port.encode("utf-8"))
         c_value = c_int()
         status = xsi_lib.xsi_is_port_pins_driving(
             self.xsim, c_tile, c_port, byref(c_value)
@@ -386,7 +386,7 @@ class Xsi:
         return c_value.value
 
     def read_mem(self, tile, address, num_bytes, return_ctype=False):
-        c_tile = c_char_p(tile)
+        c_tile = c_char_p(tile.encode("utf-8"))
         c_address = c_int(address)
         c_num_bytes = c_int(num_bytes)
         buf = create_string_buffer(num_bytes)
@@ -409,7 +409,7 @@ class Xsi:
         return ord(buf[0])
 
     def write_mem(self, tile, address, num_bytes, data):
-        c_tile = c_char_p(tile)
+        c_tile = c_char_p(tile.encode("utf-8"))
         c_address = c_int(address)
         c_num_bytes = c_int(num_bytes)
         buf = create_string_buffer(data)
@@ -429,7 +429,7 @@ class Xsi:
         self.write_mem(tile, address, 1, data)
 
     def read_pswitch_reg(self, tile, reg_num):
-        c_tile = c_char_p(tile)
+        c_tile = c_char_p(tile.encode("utf-8"))
         c_reg_num = c_int(reg_num)
         c_value = c_int()
         status = xsi_lib.xsi_read_pswitch_reg(
@@ -439,7 +439,7 @@ class Xsi:
         return c_value.value
 
     def write_pswitch_reg(self, tile, reg_num, value):
-        c_tile = c_char_p(tile)
+        c_tile = c_char_p(tile.encode("utf-8"))
         c_reg_num = c_int(reg_num)
         c_value = c_int(value)
         status = xsi_lib.xsi_write_pswitch_reg(self.xsim, c_tile, c_reg_num, c_value)
