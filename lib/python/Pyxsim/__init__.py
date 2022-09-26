@@ -13,7 +13,7 @@ import sys
 
 from Pyxsim.xmostest_subprocess import call_get_output
 from . import pyxsim
-
+from Pyxsim.xe import Xe
 
 # This function is called automatically by the runners
 def _build(
@@ -128,7 +128,7 @@ def do_run_pyxsim(xe, simargs, appargs, simthreads):
 
 
 def run_with_pyxsim(
-    xe,
+    xe_path,
     simthreads,
     simargs=[],
     appargs=[],
@@ -142,7 +142,7 @@ def run_with_pyxsim(
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
 
-        log_filename = os.path.splitext(os.path.basename(xe))[0]
+        log_filename = os.path.splitext(os.path.basename(xe_path))[0]
         log_filename = os.path.join(log_dir, f"xsim_trace_{log_filename}")
 
     if instTracing:
@@ -158,13 +158,20 @@ def run_with_pyxsim(
         vcd_args = "-o {0}.vcd".format(log_filename)
         vcd_args += (
             " -tile tile[0] -ports -ports-detailed -instructions"
-            " -functions -cycles -clock-blocks -pads -cores -usb"
+            " -functions -cycles -clock-blocks -pads -cores"
         )
+
+        # This is slightly annoying to crate the obj just to grab Node Type..
+        xe = Xe(xe_path)
+
+        # Only enable USB tracing for XS3
+        if "XS3" in xe.node_type:
+            vcd_args += "-usb"
 
         simargs += ["--vcd-tracing", vcd_args]
 
     p = multiprocessing.Process(
-        target=do_run_pyxsim, args=(xe, simargs, appargs, simthreads)
+        target=do_run_pyxsim, args=(xe_path, simargs, appargs, simthreads)
     )
     p.start()
     p.join(timeout=timeout)

@@ -26,12 +26,14 @@ class Xe:
             if freq:
                 freq = int(freq.replace("MHz", ""))
                 lcm_freq = lcm(lcm_freq, freq)
+                node_type = node.getAttribute("Type")
             for tile in node.getElementsByTagName("Tile"):
                 self._tile_map[
                     node.getAttribute("Id"), tile.getAttribute("Number")
                 ] = tile.getAttribute("Reference")
                 self.tiles.append(tile.getAttribute("Reference"))
         self.freq = lcm_freq
+        self.node_type = node_type
 
         config = parse("%s/config.xml" % self._tempdir)
         self._port_map = {}
