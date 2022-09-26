@@ -140,8 +140,8 @@ def run_on_simulator_(xe, tester=None, simthreads=[], **kwargs):
                                              build_options=build_options,
                                              cmake=cmake,
                                              binary_child=binary_child,
-                                             silent=silent
-                                             build_options=build_options)
+                                             silent=silent,
+                                             )
 
         if not build_success:
             return False
