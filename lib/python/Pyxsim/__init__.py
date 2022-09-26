@@ -10,6 +10,8 @@ import multiprocessing
 import os
 import re
 import sys
+import subprocess
+from pathlib import Path
 
 from Pyxsim.xmostest_subprocess import call_get_output
 from . import pyxsim
@@ -23,17 +25,32 @@ def _build(
     do_clean=False,
     clean_only=False,
     build_options=[],
+    cmake=False,
+    binary_child=None,
+    silent=False
 ):
+    if cmake and not binary_child:
+        msg = "ERROR: A name must be provided for the " +\
+                            "desired subdirectory of /bin/ for this build!"
+        sys.stderr.write(msg)
+        return (False, msg)
 
     # Work out the Makefile path
     path = None
-    m = re.match("(.*)/bin/(.*)", xe_path)
-    if m:
-        path = m.groups(0)[0]
-        binpath = m.groups(0)[1]
-        m = re.match("(.*)/(.*)", binpath)
+    if cmake:
+        # Set cmakelists_path to the root of the test directory. We're assuming this
+        # is the parent of the directory named "bin".
+        splitpath = Path(xe_path).resolve().parts
+        bindex = splitpath.index("bin")
+        path = Path(*splitpath[:bindex])
+    else:
+        m = re.match("(.*)/bin/(.*)", xe_path)
         if m:
-            build_config = m.groups(0)[0]
+            path = m.groups(0)[0]
+            binpath = m.groups(0)[1]
+            m = re.match("(.*)/(.*)", binpath)
+            if m:
+                build_config = m.groups(0)[0]
 
     if not path:
         msg = "ERROR: Cannot determine path to build: %s\n" % xe_path
@@ -42,61 +59,92 @@ def _build(
 
     # Copy the environment, to avoid modifying the env of the current shell
     my_env = os.environ.copy()
-    for key in env:
-        my_env[key] = str(env[key])
+    if env:
+        for key in env:
+            my_env[key] = str(env[key])
 
-    if clean_only:
-        cmd = ["xmake", "clean"]
-        do_clean = False
+    # The build process differs between cmake and xmake; cater for both
+    if cmake:
+        make_cmd = ["cmake", "-B", f"bin/{binary_child}"]
+        build_cmd = ["cmake", "--build", f"bin/{binary_child}"]
+
+        if clean_only:
+            build_cmd += ["--target", "clean"]
+            do_clean = False
+        if do_clean:
+            build_cmd += ["--clean-first"]
+
+        if silent:
+            output_args = {"stderr":subprocess.DEVNULL, "stdout":subprocess.DEVNULL}
+        else:
+            output_args = {"stderr":subprocess.STDOUT}
+
+        subprocess.run(make_cmd, cwd=path, env=my_env, **output_args)
+        subprocess.run(build_cmd, cwd=path, env=my_env, **output_args)
+
+        return (True, "Subprocesses run")
     else:
-        cmd = ["xmake", "all"]
+        if clean_only:
+            cmd = ["xmake", "clean"]
+            do_clean = False
+        else:
+            cmd = ["xmake", "all"]
 
-    if do_clean:
-        call_get_output(["xmake", "clean"], cwd=path, env=my_env)
+        if do_clean:
+            call_get_output(["xmake", "clean"], cwd=path, env=my_env)
 
-    if build_config is not None:
-        cmd += ["CONFIG=%s" % build_config]
+        if build_config is not None:
+            cmd += ["CONFIG=%s" % build_config]
 
-    cmd += build_options
+        cmd += build_options
 
-    output = call_get_output(cmd, cwd=path, env=my_env, merge_out_and_err=True)
+        output = call_get_output(cmd, cwd=path, env=my_env, merge_out_and_err=True)
 
-    success = True
-    for x in output:
-        s = str(x, "utf8")
-        if s.find("Error") != -1:
-            success = False
-        if re.match(r"xmake: \*\*\* .* Stop.", s) is not None:
-            success = False
-
-    if not success:
-        sys.stderr.write("ERROR: build failed.\n")
+        success = True
         for x in output:
             s = str(x, "utf8")
-            sys.stderr.write(s)
+            if s.find("Error") != -1:
+                success = False
+            if re.match(r"xmake: \*\*\* .* Stop.", s) is not None:
+                success = False
 
-    return (success, output)
+        if not success:
+            sys.stderr.write("ERROR: build failed.\n")
+            for x in output:
+                s = str(x, "utf8")
+                sys.stderr.write(s)
+
+        return (success, output)
 
 
 def run_on_simulator_(xe, tester=None, simthreads=[], **kwargs):
 
-    do_xe_prebuild = kwargs.get("do_xe_prebuild", False)
+    do_xe_prebuild = kwargs.pop("do_xe_prebuild", False)
     capfd = kwargs.pop("capfd", None)
 
     if do_xe_prebuild:
-        build_env = kwargs.get("build_env", {})
-        do_clean = kwargs.get("clean_before_build", False)
+        build_env = kwargs.pop("build_env", {})
+        build_config = kwargs.pop("build_config", None)
+        do_clean = kwargs.pop("clean_before_build", False)
+        binary_child = kwargs.pop("binary_child", None)
+        clean_only = kwargs.pop("clean_only", False)
+        silent = kwargs.pop("silent", None)
+        cmake = kwargs.pop("cmake", None)
         build_options = kwargs.pop("build_options", [])
-        build_success, build_output = _build(
-            xe, env=build_env, do_clean=do_clean, build_options=build_options
-        )
+
+        build_success, build_output = _build(xe,
+                                             build_config=build_config,
+                                             env=build_env,
+                                             do_clean=do_clean,
+                                             clean_only=clean_only,
+                                             build_options=build_options,
+                                             cmake=cmake,
+                                             binary_child=binary_child,
+                                             silent=silent
+                                             build_options=build_options)
 
         if not build_success:
             return False
-
-    for k in ["do_xe_prebuild", "build_env", "clean_before_build"]:
-        if k in kwargs:
-            kwargs.pop(k)
 
     run_with_pyxsim(xe, simthreads, **kwargs)
 
@@ -119,10 +167,13 @@ def run_on_simulator(*args, **kwargs):
     return result
 
 
-def do_run_pyxsim(xe, simargs, appargs, simthreads):
+def do_run_pyxsim(xe, simargs, appargs, simthreads, plugins=None):
     xsi = pyxsim.Xsi(xe_path=xe, simargs=simargs, appargs=appargs)
     for x in simthreads:
         xsi.register_simthread(x)
+    if plugins:
+        for plugin in plugins:
+            xsi.register_plugin(plugin)
     xsi.run()
     xsi.terminate()
 
@@ -133,6 +184,7 @@ def run_with_pyxsim(
     simargs=[],
     appargs=[],
     timeout=600,
+    plugins=[],
     instTracing=False,
     vcdTracing=False,
 ):
@@ -164,12 +216,11 @@ def run_with_pyxsim(
         simargs += ["--vcd-tracing", vcd_args]
 
     p = multiprocessing.Process(
-        target=do_run_pyxsim, args=(xe, simargs, appargs, simthreads)
+        target=do_run_pyxsim, args=(xe, simargs, appargs, simthreads, plugins)
     )
     p.start()
     p.join(timeout=timeout)
     if p.is_alive():
-        assert 0
         sys.stderr.write("Simulator timed out\n")
         p.terminate()
 
