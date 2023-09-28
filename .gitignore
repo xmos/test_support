@@ -61,4 +61,5 @@ test_support.egg-info/
 
 # Others
 *.DS_Store
+*.python-version
 
