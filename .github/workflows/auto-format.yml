@@ -1,5 +1,7 @@
 name: Auto-format
-on: [push, pull_request]
+on:
+  issue_comment:
+    types: [created]
 jobs:
   apply-formatting:
     runs-on: ubuntu-latest
