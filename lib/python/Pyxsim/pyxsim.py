@@ -1,4 +1,4 @@
-# Copyright 2016-2022 XMOS LIMITED.
+# Copyright 2016-2023 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 
 from ctypes import (
@@ -6,7 +6,7 @@ from ctypes import (
     byref,
     c_void_p,
     c_char_p,
-    c_int,
+    c_uint,
     create_string_buffer,
 )
 import os
@@ -20,7 +20,7 @@ from Pyxsim.xe import Xe
 from Pyxsim.testers import TestError
 from Pyxsim.xmostest_subprocess import platform_is_windows
 
-ALL_BITS = 0xFFFFFF
+ALL_BITS = 0xFFFFFFFF
 
 xcc_exec_prefix = os.environ["XCC_EXEC_PREFIX"]
 xcc_exec_prefix += "/" if not xcc_exec_prefix.endswith("/") else ""
@@ -313,7 +313,7 @@ class Xsi:
     def sample_pin(self, package, pin):
         c_package = c_char_p(package.encode("utf-8"))
         c_pin = c_char_p(pin.encode("utf-8"))
-        c_value = c_int()
+        c_value = c_uint()
         status = xsi_lib.xsi_sample_pin(self.xsim, c_package, c_pin, byref(c_value))
         XsiStatus.error_if_not_valid(status)
         return c_value.value
@@ -321,8 +321,8 @@ class Xsi:
     def sample_port_pins(self, tile, port, mask):
         c_tile = c_char_p(tile.encode("utf-8"))
         c_port = c_char_p(port.encode("utf-8"))
-        c_mask = c_int(mask)
-        c_value = c_int()
+        c_mask = c_uint(mask)
+        c_value = c_uint()
         status = xsi_lib.xsi_sample_port_pins(
             self.xsim, c_tile, c_port, c_mask, byref(c_value)
         )
@@ -332,15 +332,15 @@ class Xsi:
     def drive_pin(self, package, pin, value):
         c_package = c_char_p(package.encode("utf-8"))
         c_pin = c_char_p(pin.encode("utf-8"))
-        c_value = c_int(value)
+        c_value = c_uint(value)
         status = xsi_lib.xsi_drive_pin(self.xsim, c_package, c_pin, c_value)
         XsiStatus.error_if_not_valid(status)
 
     def drive_port_pins(self, tile, port, mask, value):
         c_tile = c_char_p(tile.encode("utf-8"))
         c_port = c_char_p(port.encode("utf-8"))
-        c_mask = c_int(mask)
-        c_value = c_int(value)
+        c_mask = c_uint(mask)
+        c_value = c_uint(value)
         status = xsi_lib.xsi_drive_port_pins(self.xsim, c_tile, c_port, c_mask, c_value)
         XsiStatus.error_if_not_valid(status)
 
@@ -348,8 +348,8 @@ class Xsi:
     def drive_periph_pin(self, periph, pin, mask, value):
         c_periph = c_char_p(periph.encode("utf-8"))
         c_pin = c_char_p(pin.encode("utf-8"))
-        c_mask = c_int(mask)
-        c_value = c_int(value)
+        c_mask = c_uint(mask)
+        c_value = c_uint(value)
         status = xsi_lib.xsi_drive_periph_pin(
             self.xsim, c_periph, c_pin, c_mask, c_value
         )
@@ -359,8 +359,8 @@ class Xsi:
     def sample_periph_pin(self, periph, pin, mask):
         c_periph = c_char_p(periph.encode("utf-8"))
         c_pin = c_char_p(pin.encode("utf-8"))
-        c_mask = c_int(mask)
-        c_value = c_int()
+        c_mask = c_uint(mask)
+        c_value = c_uint()
         status = xsi_lib.xsi_sample_periph_pin(
             self.xsim, c_periph, c_pin, c_mask, byref(c_value)
         )
@@ -370,7 +370,7 @@ class Xsi:
     def is_pin_driving(self, package, pin):
         c_package = c_char_p(package.encode("utf-8"))
         c_pin = c_char_p(pin.encode("utf-8"))
-        c_value = c_int()
+        c_value = c_uint()
         status = xsi_lib.xsi_is_pin_driving(self.xsim, c_package, c_pin, byref(c_value))
         XsiStatus.error_if_not_valid(status)
         return c_value.value
@@ -378,7 +378,7 @@ class Xsi:
     def is_port_pins_driving(self, tile, port):
         c_tile = c_char_p(tile.encode("utf-8"))
         c_port = c_char_p(port.encode("utf-8"))
-        c_value = c_int()
+        c_value = c_uint()
         status = xsi_lib.xsi_is_port_pins_driving(
             self.xsim, c_tile, c_port, byref(c_value)
         )
@@ -387,8 +387,8 @@ class Xsi:
 
     def read_mem(self, tile, address, num_bytes, return_ctype=False):
         c_tile = c_char_p(tile.encode("utf-8"))
-        c_address = c_int(address)
-        c_num_bytes = c_int(num_bytes)
+        c_address = c_uint(address)
+        c_num_bytes = c_uint(num_bytes)
         buf = create_string_buffer(num_bytes)
         status = xsi_lib.xsi_read_mem(self.xsim, c_tile, c_address, c_num_bytes, buf)
         XsiStatus.error_if_not_valid(status)
@@ -410,8 +410,8 @@ class Xsi:
 
     def write_mem(self, tile, address, num_bytes, data):
         c_tile = c_char_p(tile.encode("utf-8"))
-        c_address = c_int(address)
-        c_num_bytes = c_int(num_bytes)
+        c_address = c_uint(address)
+        c_num_bytes = c_uint(num_bytes)
         buf = create_string_buffer(data)
         status = xsi_lib.xsi_write_mem(self.xsim, c_tile, c_address, c_num_bytes, buf)
         XsiStatus.error_if_not_valid(status)
@@ -430,8 +430,8 @@ class Xsi:
 
     def read_pswitch_reg(self, tile, reg_num):
         c_tile = c_char_p(tile.encode("utf-8"))
-        c_reg_num = c_int(reg_num)
-        c_value = c_int()
+        c_reg_num = c_uint(reg_num)
+        c_value = c_uint()
         status = xsi_lib.xsi_read_pswitch_reg(
             self.xsim, c_tile, c_reg_num, byref(c_value)
         )
@@ -440,8 +440,8 @@ class Xsi:
 
     def write_pswitch_reg(self, tile, reg_num, value):
         c_tile = c_char_p(tile.encode("utf-8"))
-        c_reg_num = c_int(reg_num)
-        c_value = c_int(value)
+        c_reg_num = c_uint(reg_num)
+        c_value = c_uint(value)
         status = xsi_lib.xsi_write_pswitch_reg(self.xsim, c_tile, c_reg_num, c_value)
         XsiStatus.error_if_not_valid(status)
 
