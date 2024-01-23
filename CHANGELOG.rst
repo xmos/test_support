@@ -5,7 +5,8 @@ test_support Change Log
 -----
 
   * CHANGE:    added NOCOVERSTART and NOCOVEREND
-  * ADD:       AssertiveComparisonTester, which asserts on errors rather than printing
+  * ADD:       AssertiveComparisonTester, which asserts on errors rather than
+    printing
   * CHANGE:    Fixed use of 32b ports in Pyxsim
   * ADD:       Initial CMake support
   * ADD:       Support for basic VCD tracing
