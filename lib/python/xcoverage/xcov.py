@@ -127,7 +127,7 @@ def normalize_location(location, excluded_file):
         if not flag:
             bad_source_files.add(filename)
             return fn, fileline
-            
+
     # search for excluded file
     for excludefile in excluded_file:
         result_ex = re.search(excludefile, filename)
@@ -136,7 +136,6 @@ def normalize_location(location, excluded_file):
             print("ignore file: %s" % filename)
             excluded_files.add(filename)
             return fn, fileline
-
 
     source_files.add(filename)
 
@@ -203,7 +202,9 @@ def init_addr2line(coverage_files, coverage_lines, xcov_filename, excluded_file)
                 print(
                     "Error len addrs %d results %d" % (len(addrs_subset), len(results))
                 )
-            locations = [normalize_location(location, excluded_file) for location in results]
+            locations = [
+                normalize_location(location, excluded_file) for location in results
+            ]
             locations = list(zip(locations, asm_subset))
             addr2line_in_tile[tile].update(dict(zip(addrs_subset, locations)))
 
