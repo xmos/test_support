@@ -196,7 +196,7 @@ def run_with_pyxsim(
 
         # Only enable USB tracing for XS3
         if "XS3" in xe.node_type:
-            vcd_args += "-usb"
+            vcd_args += " -usb"
 
         simargs += ["--vcd-tracing", vcd_args]
 
