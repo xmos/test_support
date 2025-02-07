@@ -1,4 +1,4 @@
-# Copyright 2016-2024 XMOS LIMITED.
+# Copyright 2016-2025 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 """
 Pyxsim pytest framework
@@ -196,7 +196,7 @@ def run_with_pyxsim(
 
         # Only enable USB tracing for XS3
         if "XS3" in xe.node_type:
-            vcd_args += "-usb"
+            vcd_args += " -usb"
 
         simargs += ["--vcd-tracing", vcd_args]
 
