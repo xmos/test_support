@@ -1,4 +1,4 @@
-# Copyright 2016-2022 XMOS LIMITED.
+# Copyright 2016-2025 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import re
 import sys
@@ -60,9 +60,9 @@ class ComparisonTester:
         golden = self._golden
         regexp = self._regexp
         if isinstance(golden, list):
-            expected = golden
+            expected = [x.strip() for x in golden]
         elif isinstance(golden, str):
-            expected = golden.split("\n")
+            expected = [x.strip() for x in golden.split("\n")]
         else:
             expected = [x.strip() for x in golden.readlines()]
         if expected[0].strip() == "":
@@ -140,8 +140,8 @@ class ComparisonTester:
 
 class AssertiveComparisonTester:
     """
-    This tester uses assert statements rather than printing errors; it will 
-    compare output against a file or list of strings and pass the test if 
+    This tester uses assert statements rather than printing errors; it will
+    compare output against a file or list of strings and pass the test if
     the output matches.
     There are 5 failure modes: the output is longer than expected, shorter than
     expected, does not contain an expected line, contains an unexpected line, or
@@ -149,16 +149,16 @@ class AssertiveComparisonTester:
 
      :param golden:     The expected data to compare the output against.
                         Should be either a path to a file to read or a list of strings.
-     :param regexp:     A bool that controls whether the expect lines are 
+     :param regexp:     A bool that controls whether the expect lines are
                         treated as regular expressions or not.
      :param ordered:    A bool that determines whether the expected input needs
                         to be matched in an ordered manner or not.
-     :param ignore:     A list of regular expressions to ignore. If 
+     :param ignore:     A list of regular expressions to ignore. If
                         suppress_multidrive_messages is set to True, this will
                         be in addition to these.
      :param suppress_multidrive_messages:
                         A bool that determines whether lines beginning with
-                        'Internal control pad and plugin driving in opposite 
+                        'Internal control pad and plugin driving in opposite
                         directions' should be ignored. Defaults to True.
     """
 
@@ -184,9 +184,9 @@ class AssertiveComparisonTester:
         if type(golden) == str:
             with open(self._golden) as golden:
                 expected = [x.strip() for x in golden.readlines()]
-        else: 
+        else:
             expected = [x.strip() for x in golden]
-        
+
         if expected:
             if expected[0].strip() == "":
                 expected = expected[1:]
@@ -208,12 +208,12 @@ class AssertiveComparisonTester:
             if capture[-1].strip() == "":
                 capture = capture[:-1]
 
-        # The essential principle here is that we don't want to loop over the 
+        # The essential principle here is that we don't want to loop over the
         # data again until we really can't avoid it any longer.
-        
+
         # Test that the capture is not too short
         assert len(capture) >= len(expected), f"Length of output ({len(capture)} lines) less than expected ({len(expected)} lines) \n{capture} \n{expected}"
-        
+
         # Test that the capture is not too long
         assert len(capture) <= len(expected), f"Length of output ({len(capture)} lines) greater than expected ({len(expected)} lines) \n{capture} \n{expected}"
 
@@ -228,9 +228,9 @@ class AssertiveComparisonTester:
 
             # Test that the capture does not contain an unexpected line
             assert set(capture) <= set(expected), f"Output contains unexpected lines \n Contains: {capture - expected}"
-        
+
         else:
-            # Otherwise, we need to loop over the whole dataset. 
+            # Otherwise, we need to loop over the whole dataset.
             # Let's handle ordered and unordered cases separately.
             if ordered:
                 # We know that the two lists are the same length, so we can zip
@@ -246,7 +246,7 @@ class AssertiveComparisonTester:
                 # exists at least one line in expected that matches.
                 for c_val in capture:
                     assert any(re.match(e_val, c_val) for e_val in expected), f"Cannot find regex match for output ({c_val})"
-                # And that for every line in expected there exists at least one 
+                # And that for every line in expected there exists at least one
                 # line in capture that matches (these are two different things!)
                 for e_val in expected:
                     assert any(re.match(e_val, c_val) for c_val in capture), f"Cannot find regex match for expectation ({e_val})"
