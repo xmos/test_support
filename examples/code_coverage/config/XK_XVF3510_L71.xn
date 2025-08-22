@@ -88,7 +88,7 @@
   </Links>
 
   <ExternalDevices>
-    <Device NodeId="0" Tile="0" Class="SQIFlash" Name="bootFlash0" Type="0" PageSize="256" SectorSize="4096" NumPages="8192">
+    <Device NodeId="0" Tile="0" Class="SQIFlash" Name="bootFlash0">
       <Attribute Name="PORT_SQI_CS" Value="PORT_SQI_CS_0"/>
       <Attribute Name="PORT_SQI_SCLK" Value="PORT_SQI_SCLK_0"/>
       <Attribute Name="PORT_SQI_SIO" Value="PORT_SQI_SIO_0"/>
