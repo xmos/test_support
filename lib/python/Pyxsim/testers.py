@@ -24,14 +24,15 @@ class ComparisonTester:
     This tester will compare ouput against a file and pass a test if
     the output matches
 
-     :param golden:   The expected data to compare the output against.
-                      Can be a list of strings, a string split on new lines,
-                      or a file to read.
-     :param regexp:   A bool that controls whether the expect lines are treated
-                      as regular expressions or not.
-     :param ignore:   A list of regular expressions to ignore
-     :param ordered:  A bool that determines whether the expected input needs
-                      to be matched in an ordered manner or not.
+     :param golden:     The expected data to compare the output against.
+                        Can be a list of strings, a string split on new lines,
+                        or a file to read.
+     :param regexp:     A bool that controls whether the expect lines are treated
+                        as regular expressions or not.
+     :param ignore:     A list of regular expressions to ignore
+     :param ordered:    A bool that determines whether the expected input needs
+                        to be matched in an ordered manner or not.
+     :param verbosity:  An int that determines verbosity level
     """
 
     def __init__(
@@ -40,11 +41,13 @@ class ComparisonTester:
         regexp=False,
         ignore=[],
         ordered=True,
+        verbosity=0,
     ):
         self._golden = golden
         self._regexp = regexp
         self._ignore = ignore
         self._ordered = ordered
+        self._verbosity = verbosity
         self.result = None
         self.failures = []
 
@@ -59,6 +62,7 @@ class ComparisonTester:
     def run(self, output):
         golden = self._golden
         regexp = self._regexp
+        expected = []
         if isinstance(golden, list):
             expected = [x.strip() for x in golden]
         elif isinstance(golden, str):
@@ -85,15 +89,29 @@ class ComparisonTester:
                 continue
             line_num += 1
 
+            try:
+                expected_line = expected[line_num]
+            except IndexError:
+                # Golden file is shorter than output
+                expected_line = "<no line>"
+
+            if self._verbosity > 0:
+                print(f"GOLDEN: {expected_line}")
+                print(f"OUTPUT: {line}")
+
             if line_num >= num_expected:
                 self.record_failure("Length of expected output less than output")
-                break
+
+                if self._verbosity == 0:
+                    # When not in verbose mode, fail immediately
+                    # In verbose mode keep printing out all of the remaining output to assist with debugging
+                    break
 
             if self._ordered:
                 if regexp:
-                    match = re.match(expected[line_num] + "$", line.strip())
+                    match = re.match(expected_line + "$", line.strip())
                 else:
-                    match = expected[line_num] == line.strip()
+                    match = expected_line == line.strip()
 
                 if not match:
                     self.record_failure(
@@ -104,7 +122,7 @@ class ComparisonTester:
                         )
                         % (
                             line_num,
-                            expected[line_num].strip(),
+                            expected_line.strip(),
                             line.strip(),
                         )
                     )
