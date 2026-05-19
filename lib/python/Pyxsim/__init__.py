@@ -1,4 +1,4 @@
-# Copyright 2016-2025 XMOS LIMITED.
+# Copyright 2016-2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 """
 Pyxsim pytest framework
@@ -166,6 +166,14 @@ def run_with_pyxsim(
     instTracing=False,
     vcdTracing=False,
 ):
+
+    # Use 'fork' on Unix-like systems to preserve stdout/stderr capture
+    # Windows continues to use default 'spawn' method
+    if sys.platform != 'win32':
+        ctx = multiprocessing.get_context('fork')
+    else:
+        ctx = multiprocessing.get_context()
+
     if instTracing or vcdTracing:
 
         log_dir = "logs"
@@ -200,7 +208,7 @@ def run_with_pyxsim(
 
         simargs += ["--vcd-tracing", vcd_args]
 
-    p = multiprocessing.Process(
+    p = ctx.Process(
         target=do_run_pyxsim, args=(xe_path, simargs, appargs, simthreads, plugins)
     )
     p.start()
