@@ -29,10 +29,16 @@ class ComparisonTester:
                         or a file to read.
      :param regexp:     A bool that controls whether the expect lines are treated
                         as regular expressions or not.
-     :param ignore:     A list of regular expressions to ignore
+     :param ignore:     A list of regular expressions to ignore. If
+                        suppress_multidrive_messages is set to True, this will
+                        be in addition to these.
      :param ordered:    A bool that determines whether the expected input needs
                         to be matched in an ordered manner or not.
      :param verbosity:  An int that determines verbosity level
+     :param suppress_multidrive_messages:
+                        A bool that determines whether lines beginning with
+                        'Internal control pad and plugin driving in opposite
+                        directions' should be ignored. Defaults to True.
     """
 
     def __init__(
@@ -42,12 +48,14 @@ class ComparisonTester:
         ignore=[],
         ordered=True,
         verbosity=0,
+        suppress_multidrive_messages=True,
     ):
         self._golden = golden
         self._regexp = regexp
         self._ignore = ignore
         self._ordered = ordered
         self._verbosity = verbosity
+        self._smm = suppress_multidrive_messages
         self.result = None
         self.failures = []
 
@@ -81,10 +89,15 @@ class ComparisonTester:
 
         for line in output:
             ignore = False
-            for p in self._ignore:
-                if re.match(p, line.strip()):
-                    ignore = True
-                    break
+            # Check if we should suppress multidrive messages
+            if self._smm and line.strip().startswith("Internal control pad and plugin driving in opposite directions"):
+                ignore = True
+            # Check against user-provided ignore patterns
+            if not ignore:
+                for p in self._ignore:
+                    if re.match(p, line.strip()):
+                        ignore = True
+                        break
             if ignore:
                 continue
             line_num += 1
