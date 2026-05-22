@@ -219,6 +219,10 @@ def run_with_pyxsim(
     if p.is_alive():
         sys.stderr.write("Simulator timed out\n")
         p.terminate()
+        p.join(timeout=1)
+        if p.is_alive() and hasattr(p, "kill"):
+            p.kill()
+            p.join()
         return False
 
     if p.exitcode != 0:
