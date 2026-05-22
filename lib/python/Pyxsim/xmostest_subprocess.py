@@ -124,6 +124,8 @@ def wait_with_timeout(p_and_sig, timeout):
             ev.wait()
     except KeyboardInterrupt:
         pstreekill(process)
+    finally:
+        process.join()
 
     return (not finished, retv.value)
 
