@@ -124,6 +124,12 @@ def run_on_simulator_(xe, tester=None, simthreads=[], **kwargs):
         if not build_success:
             return False
 
+    if capfd:
+        pre_stdout, pre_stderr = capfd.readouterr()
+        with capfd.disabled():
+            sys.stdout.write(pre_stdout)
+            sys.stderr.write(pre_stderr)
+
     sim_success = run_with_pyxsim(xe, simthreads, **kwargs)
 
     if not sim_success:

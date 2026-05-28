@@ -13,4 +13,7 @@ setuptools.setup(
     name="test_support",
     package_dir={"": "lib/python"},
     packages=setuptools.find_packages(),
+    install_requires=[
+        "colorama>=0.4.6",
+    ],
 )

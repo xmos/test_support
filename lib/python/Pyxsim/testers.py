@@ -3,6 +3,7 @@
 import re
 import sys
 from typing import Optional, Sequence, Union
+from colorama import Fore, Style, init
 
 
 class TestError(Exception):
@@ -50,6 +51,7 @@ class ComparisonTester:
         verbosity=0,
         suppress_multidrive_messages=True,
     ):
+        init(autoreset=False, strip=False)  # Initialize colorama, force colors even when not TTY
         self._golden = golden
         self._regexp = regexp
         self._ignore = ignore
@@ -109,7 +111,7 @@ class ComparisonTester:
                 expected_line = "<no line>"
 
             if self._verbosity > 1:
-                print(f"GOLDEN: {expected_line}")
+                print(f"{Fore.YELLOW}GOLDEN: {expected_line}{Style.RESET_ALL}")
             if self._verbosity > 0:
                 print(f"OUTPUT: {line}")
 
@@ -131,7 +133,7 @@ class ComparisonTester:
                     self.record_failure(
                         (
                             "Line %d of output does not match expected\n"
-                            + "  Expected: %s\n"
+                            + f"  {Fore.YELLOW}Expected: %s{Style.RESET_ALL}\n"
                             + "  Actual  : %s"
                         )
                         % (
@@ -149,14 +151,19 @@ class ComparisonTester:
 
                 if not match:
                     self.record_failure(
-                        ("Line %d of output not found in expected\n" + "  Actual  : %s")
+                        (
+                            "Line %d of output not found in expected\n"
+                            + f"  {Fore.YELLOW}Expected (one of matching lines){Style.RESET_ALL}\n"
+                            + "  Actual  : %s"
+                        )
                         % (line_num, line.strip())
                     )
 
         if num_expected > line_num + 1:
             self.record_failure(
-                "Length of expected output greater than output\nMissing:\n"
+                f"Length of expected output greater than output\n{Fore.RED}Missing:\n"
                 + "\n".join(expected[line_num + 1 :])  # noqa E203
+                + f"{Style.RESET_ALL}"
             )
         output = {"output": "".join(output)}
 

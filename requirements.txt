@@ -18,6 +18,8 @@
 # pip-install this one as editable using this repository's setup.py file.  The
 # same modules should appear in the setup.py list as given below.
 
+colorama==0.4.6
+
 # Development dependencies
 #
 # Each link listed below specifies the path to a setup.py file which are
