@@ -112,7 +112,7 @@ def Popen(*args, **kwargs):
 
 
 def wait_with_timeout(p_and_sig, timeout):
-    (ev, _pidv, process) = p_and_sig
+    (ev, _pidv, retv, process) = p_and_sig
     process.start()
     finished = True
     try:
@@ -124,11 +124,13 @@ def wait_with_timeout(p_and_sig, timeout):
             ev.wait()
     except KeyboardInterrupt:
         pstreekill(process)
+    finally:
+        process.join()
 
-    return not finished
+    return (not finished, retv.value)
 
 
-def do_cmd(ev, pidv, *args, **kwargs):
+def do_cmd(ev, pidv, retv, *args, **kwargs):
     if not platform_is_windows():
         os.setpgid(os.getpid(), 0)
     if "stdout_fname" in kwargs:
@@ -140,21 +142,22 @@ def do_cmd(ev, pidv, *args, **kwargs):
     process = Popen(*args, **kwargs)
     pidv.value = process.pid
     try:
-        process.wait()
+        retv.value = process.wait()
     except KeyboardInterrupt:
         # Catch the KeyboardInterrupt raised due to the SIGINT signal
         # sent by pstreekill()
-        pass
+        retv.value = -1
     ev.set()
 
 
 def create_cmd_process(*args, **kwargs):
     ev = multiprocessing.Event()
     pidv = multiprocessing.Value("d", 0)
-    args = tuple([ev, pidv] + list(args))
+    retv = multiprocessing.Value("i", 0)
+    args = tuple([ev, pidv, retv] + list(args))
     process = multiprocessing.Process(target=do_cmd, args=args, kwargs=kwargs)
 
-    return (ev, pidv, process)
+    return (ev, pidv, retv, process)
 
 
 def remove(name):
@@ -177,13 +180,17 @@ def call(*args, **kwargs):
     If silent, then create temporary files to pass stdout and stderr to since
     on Windows the less/more-like behaviour waits for a keypress if it goes
     to stdout.
+
+    Raises TestError if the command returns a non-zero exit code.
     """
     silent = kwargs.pop("silent", False)
-    retval = 0
     timeout = None
     if "timeout" in kwargs:
         timeout = kwargs["timeout"]
         kwargs.pop("timeout")
+
+    cmd_str = " ".join(args[0]) if args else "<unknown command>"
+    stdout_lines = []
 
     if silent:
         out = tempfile.NamedTemporaryFile(delete=False)
@@ -191,7 +198,7 @@ def call(*args, **kwargs):
         kwargs["stderr"] = subprocess.STDOUT
 
         process = create_cmd_process(*args, **kwargs)
-        timed_out = wait_with_timeout(process, timeout)
+        timed_out, retval = wait_with_timeout(process, timeout)
         out.seek(0)
         stdout_lines = out.readlines()
         out.close()
@@ -201,14 +208,20 @@ def call(*args, **kwargs):
             log_debug("     " + line.rstrip())
     else:
         process = create_cmd_process(*args, **kwargs)
-        timed_out = wait_with_timeout(process, timeout)
+        timed_out, retval = wait_with_timeout(process, timeout)
         # Ensure spawned processes are not left running past this point
         # There should be no children running now (as they would be orphaned)
-        process[2].terminate()
-        process[2].join(timeout=0.1)  # Avoid always printing wait message
-        while process[2].is_alive():
-            sys.stdout.write("Waiting for PID %d to terminate\n" % process[2].pid)
-            process[2].join(timeout=1.0)
+        process[3].terminate()
+        process[3].join(timeout=0.1)  # Avoid always printing wait message
+        while process[3].is_alive():
+            sys.stdout.write("Waiting for PID %d to terminate\n" % process[3].pid)
+            process[3].join(timeout=1.0)
+
+    if retval != 0:
+        output = "".join(line.decode("utf-8") if isinstance(line, bytes) else line for line in stdout_lines)
+        raise TestError(
+            f"Command failed with exit code {retval}: {cmd_str}\nOutput:\n{output}"
+        )
 
     if timeout:
         return (timed_out, retval)
@@ -219,6 +232,8 @@ def call(*args, **kwargs):
 def call_get_output(*args, **kwargs):
     """Create temporary files to pass stdout and stderr to since on Windows the
     less/more-like behaviour waits for a keypress if it goes to stdout.
+
+    Raises TestError if the command returns a non-zero exit code.
     """
     merge = kwargs.pop("merge_out_and_err", False)
 
@@ -229,6 +244,9 @@ def call_get_output(*args, **kwargs):
         timeout = kwargs["timeout"]
         kwargs.pop("timeout")
 
+    cmd_str = " ".join(args[0]) if args else "<unknown command>"
+    stderr_lines = []
+
     if merge:
         kwargs["stderr"] = subprocess.STDOUT
     else:
@@ -238,7 +256,7 @@ def call_get_output(*args, **kwargs):
         err.close()
 
     process = create_cmd_process(*args, **kwargs)
-    timed_out = wait_with_timeout(process, timeout)
+    timed_out, retval = wait_with_timeout(process, timeout)
     out.seek(0)
     stdout_lines = out.readlines()
     out.close()
@@ -256,6 +274,13 @@ def call_get_output(*args, **kwargs):
         for line in stderr_lines:
             line = line.decode("utf-8")
             log_debug("     err:" + line.rstrip())
+
+    if retval != 0:
+        stdout_str = "".join(line.decode("utf-8") if isinstance(line, bytes) else line for line in stdout_lines)
+        stderr_str = "".join(line.decode("utf-8") if isinstance(line, bytes) else line for line in stderr_lines)
+        raise TestError(
+            f"Command failed with exit code {retval}: {cmd_str}\nStdout:\n{stdout_str}\nStderr:\n{stderr_str}"
+        )
 
     if merge:
         if timeout:

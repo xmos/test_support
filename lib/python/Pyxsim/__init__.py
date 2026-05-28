@@ -124,7 +124,10 @@ def run_on_simulator_(xe, tester=None, simthreads=[], **kwargs):
         if not build_success:
             return False
 
-    run_with_pyxsim(xe, simthreads, **kwargs)
+    sim_success = run_with_pyxsim(xe, simthreads, **kwargs)
+
+    if not sim_success:
+        return False
 
     if tester and capfd:
         cap_output, err = capfd.readouterr()
@@ -216,6 +219,17 @@ def run_with_pyxsim(
     if p.is_alive():
         sys.stderr.write("Simulator timed out\n")
         p.terminate()
+        p.join(timeout=1)
+        if p.is_alive() and hasattr(p, "kill"):
+            p.kill()
+            p.join()
+        return False
+
+    if p.exitcode != 0:
+        sys.stderr.write(f"Simulator process failed with exit code {p.exitcode}\n")
+        return False
+
+    return True
 
 
 class SimThread:

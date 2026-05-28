@@ -4,12 +4,14 @@ test_support Change Log
 UNRELEASED
 ----------
 
-  * ADDED:     AssertiveComparisonChecker’s suppress_multidrive_messages support/param to
+  * ADDED:     AssertiveComparisonChecker's suppress_multidrive_messages support/param to
     ComparisonChecker
   * ADDED:     Methods in Xsi class for getting the xsim tick frequency
   * CHANGED:   Pyxsim CMake build uses XCommon CMake
   * CHANGED:   The way time is incremented by time_step for better floating point precision
   * FIXED:     Resolved issues with stdout/stderr capture in Pyxsim
+  * FIXED:     Subprocess exit code checking in Pyxsim to properly report errors from
+    failed commands
 
 2.0.0
 -----
