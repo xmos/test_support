@@ -108,8 +108,9 @@ class ComparisonTester:
                 # Golden file is shorter than output
                 expected_line = "<no line>"
 
-            if self._verbosity > 0:
+            if self._verbosity > 1:
                 print(f"GOLDEN: {expected_line}")
+            if self._verbosity > 0:
                 print(f"OUTPUT: {line}")
 
             if line_num >= num_expected:

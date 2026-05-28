@@ -9,6 +9,8 @@ UNRELEASED
   * ADDED:     Methods in Xsi class for getting the xsim tick frequency
   * CHANGED:   Pyxsim CMake build uses XCommon CMake
   * CHANGED:   The way time is incremented by time_step for better floating point precision
+  * CHANGED:   ComparisonChecker only prints expected output when verbosity is 2 or higher (i.e.
+    -vv)
   * FIXED:     Resolved issues with stdout/stderr capture in Pyxsim
   * FIXED:     Subprocess exit code checking in Pyxsim to properly report errors from
     failed commands
