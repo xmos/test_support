@@ -103,6 +103,7 @@ def run_on_simulator_(xe, tester=None, simthreads=[], **kwargs):
 
     do_xe_prebuild = kwargs.pop("do_xe_prebuild", False)
     capfd = kwargs.pop("capfd", None)
+    verbosity = kwargs.pop("verbosity", 0)
 
     if do_xe_prebuild:
         build_env = kwargs.pop("build_env", {})
@@ -137,10 +138,20 @@ def run_on_simulator_(xe, tester=None, simthreads=[], **kwargs):
 
     if tester and capfd:
         cap_output, err = capfd.readouterr()
+        if verbosity > 0:
+            with capfd.disabled():
+                sys.stdout.write(cap_output)
+                sys.stderr.write(err)
         output = cap_output.split("\n")
         output = [x.strip() for x in output if x != ""]
         result = tester.run(output)
         return result
+
+    if verbosity > 0 and capfd:
+        cap_output, err = capfd.readouterr()
+        with capfd.disabled():
+            sys.stdout.write(cap_output)
+            sys.stderr.write(err)
 
     return True
 
