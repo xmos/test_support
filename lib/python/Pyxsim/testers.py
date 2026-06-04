@@ -3,6 +3,7 @@
 import re
 import sys
 from typing import Optional, Sequence, Union
+from colorama import Fore, Style, init
 
 
 class TestError(Exception):
@@ -50,6 +51,7 @@ class ComparisonTester:
         verbosity=0,
         suppress_multidrive_messages=True,
     ):
+        init(autoreset=False, strip=False)  # Initialize colorama, force colors even when not TTY
         self._golden = golden
         self._regexp = regexp
         self._ignore = ignore
@@ -66,6 +68,46 @@ class ComparisonTester:
         self.failures.append(failure_reason)
         sys.stderr.write("ERROR: %s" % failure_reason)
         self.result = False
+
+    def should_ignore_line(self, line):
+        stripped = line.strip()
+
+        if self._smm and stripped.startswith("Internal control pad and plugin driving in opposite directions"):
+            return "multidrive"
+
+        for p in self._ignore:
+            if re.match(p, stripped):
+                return "ignored"
+
+        return None
+
+    def filter_output(self, output):
+        filtered = []
+        suppressed = {}
+
+        for line in output:
+            reason = self.should_ignore_line(line)
+            if reason:
+                suppressed[reason] = suppressed.get(reason, 0) + 1
+            else:
+                filtered.append(line)
+
+        return filtered, suppressed
+
+    def format_suppression_summary(self, suppressed):
+        lines = []
+
+        if suppressed.get("multidrive"):
+            lines.append(
+                f"{Fore.CYAN}{suppressed['multidrive']} multidrive messages suppressed{Style.RESET_ALL}"
+            )
+
+        if suppressed.get("ignored"):
+            lines.append(
+                f"{Fore.CYAN}{suppressed['ignored']} ignored output lines suppressed{Style.RESET_ALL}"
+            )
+
+        return lines
 
     def run(self, output):
         golden = self._golden
@@ -88,17 +130,7 @@ class ComparisonTester:
         num_expected = len(expected)
 
         for line in output:
-            ignore = False
-            # Check if we should suppress multidrive messages
-            if self._smm and line.strip().startswith("Internal control pad and plugin driving in opposite directions"):
-                ignore = True
-            # Check against user-provided ignore patterns
-            if not ignore:
-                for p in self._ignore:
-                    if re.match(p, line.strip()):
-                        ignore = True
-                        break
-            if ignore:
+            if self.should_ignore_line(line):
                 continue
             line_num += 1
 
@@ -108,8 +140,9 @@ class ComparisonTester:
                 # Golden file is shorter than output
                 expected_line = "<no line>"
 
+            if self._verbosity > 1:
+                print(f"{Fore.YELLOW}GOLDEN: {expected_line}{Style.RESET_ALL}")
             if self._verbosity > 0:
-                print(f"GOLDEN: {expected_line}")
                 print(f"OUTPUT: {line}")
 
             if line_num >= num_expected:
@@ -130,7 +163,7 @@ class ComparisonTester:
                     self.record_failure(
                         (
                             "Line %d of output does not match expected\n"
-                            + "  Expected: %s\n"
+                            + f"  {Fore.YELLOW}Expected: %s{Style.RESET_ALL}\n"
                             + "  Actual  : %s"
                         )
                         % (
@@ -148,14 +181,19 @@ class ComparisonTester:
 
                 if not match:
                     self.record_failure(
-                        ("Line %d of output not found in expected\n" + "  Actual  : %s")
+                        (
+                            "Line %d of output not found in expected\n"
+                            + f"  {Fore.YELLOW}Expected (one of matching lines){Style.RESET_ALL}\n"
+                            + "  Actual  : %s"
+                        )
                         % (line_num, line.strip())
                     )
 
         if num_expected > line_num + 1:
             self.record_failure(
-                "Length of expected output greater than output\nMissing:\n"
+                f"Length of expected output greater than output\n{Fore.RED}Missing:\n"
                 + "\n".join(expected[line_num + 1 :])  # noqa E203
+                + f"{Style.RESET_ALL}"
             )
         output = {"output": "".join(output)}
 
