@@ -1,0 +1,24 @@
+# This file relates to internal XMOS infrastructure and should be ignored by external users
+---
+lib_name: test_support
+project: '{{lib_name}}'
+title: '{{lib_name}}: XMOS test support helpers'
+version: 2.0.0
+
+documentation:
+  exclude_patterns_path: doc/exclude_patterns.inc
+  root_doc: doc/rst/test_support.rst
+  linkcheck_ignore_regex: ['']
+  latex_toc_depth: 3
+  latex_secnum_depth: 3
+  cognidox_part_number: XM-XXXXXX-UG
+  pdfs:
+    doc/rst/test_support.rst:
+      pdf_title: '{{title}}'
+      pdf_filename: '{{lib_name}}_v{{version}}'
+    README.rst:
+      pdf_title: '{{title}} (README)'
+      pdf_filename: '{{lib_name}}_v{{version}}_readme'
+      pdf_short: yes
+software:
+  cognidox_part_number: XM-XXXXXX-SM

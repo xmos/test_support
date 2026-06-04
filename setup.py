@@ -13,7 +13,11 @@ setuptools.setup(
     name="test_support",
     package_dir={"": "lib/python"},
     packages=setuptools.find_packages(),
+    package_data={
+        "testplan": ["resources/*.css", "resources/*.yml"],
+    },
     install_requires=[
         "colorama>=0.4.6",
+        "PyYAML>=6.0.2",
     ],
 )

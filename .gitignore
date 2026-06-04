@@ -52,6 +52,12 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+# Built documentation
+doc/_build/pdf/*.pdf
+**/doc/pdf/*.pdf
+**doc/_build/**
+
+
 # Tmp files
 *.*~
 *~

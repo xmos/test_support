@@ -19,6 +19,7 @@
 # same modules should appear in the setup.py list as given below.
 
 colorama==0.4.6
+PyYAML==6.0.2
 
 # Development dependencies
 #
