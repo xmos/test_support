@@ -11,9 +11,17 @@ UNRELEASED
   * CHANGED:   The way time is incremented by time_step for better floating point precision
   * CHANGED:   ComparisonChecker only prints expected output when verbosity is 2 or higher (i.e.
     -vv)
+  * CHANGED:   Pyxsim prints captured simulator output when verbosity is enabled while still
+    preserving output capture for tester comparisons
+  * CHANGED:   ComparisonChecker verbose output uses colour to highlight expected and missing
+    output
+  * CHANGED:   ComparisonChecker filters suppressed output from verbose Pyxsim logs and reports
+    colourised suppression counts for multidrive and ignored lines
   * FIXED:     Resolved issues with stdout/stderr capture in Pyxsim
   * FIXED:     Subprocess exit code checking in Pyxsim to properly report errors from
     failed commands
+  * FIXED:     Pyxsim now joins and terminates simulator/subprocess workers on timeout to avoid
+    leaking child processes
 
 2.0.0
 -----
@@ -29,4 +37,3 @@ UNRELEASED
 -----
 
   * Initial release
-

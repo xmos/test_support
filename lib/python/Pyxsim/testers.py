@@ -69,6 +69,46 @@ class ComparisonTester:
         sys.stderr.write("ERROR: %s" % failure_reason)
         self.result = False
 
+    def should_ignore_line(self, line):
+        stripped = line.strip()
+
+        if self._smm and stripped.startswith("Internal control pad and plugin driving in opposite directions"):
+            return "multidrive"
+
+        for p in self._ignore:
+            if re.match(p, stripped):
+                return "ignored"
+
+        return None
+
+    def filter_output(self, output):
+        filtered = []
+        suppressed = {}
+
+        for line in output:
+            reason = self.should_ignore_line(line)
+            if reason:
+                suppressed[reason] = suppressed.get(reason, 0) + 1
+            else:
+                filtered.append(line)
+
+        return filtered, suppressed
+
+    def format_suppression_summary(self, suppressed):
+        lines = []
+
+        if suppressed.get("multidrive"):
+            lines.append(
+                f"{Fore.CYAN}{suppressed['multidrive']} multidrive messages suppressed{Style.RESET_ALL}"
+            )
+
+        if suppressed.get("ignored"):
+            lines.append(
+                f"{Fore.CYAN}{suppressed['ignored']} ignored output lines suppressed{Style.RESET_ALL}"
+            )
+
+        return lines
+
     def run(self, output):
         golden = self._golden
         regexp = self._regexp
@@ -90,17 +130,7 @@ class ComparisonTester:
         num_expected = len(expected)
 
         for line in output:
-            ignore = False
-            # Check if we should suppress multidrive messages
-            if self._smm and line.strip().startswith("Internal control pad and plugin driving in opposite directions"):
-                ignore = True
-            # Check against user-provided ignore patterns
-            if not ignore:
-                for p in self._ignore:
-                    if re.match(p, line.strip()):
-                        ignore = True
-                        break
-            if ignore:
+            if self.should_ignore_line(line):
                 continue
             line_num += 1
 

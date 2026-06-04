@@ -138,12 +138,22 @@ def run_on_simulator_(xe, tester=None, simthreads=[], **kwargs):
 
     if tester and capfd:
         cap_output, err = capfd.readouterr()
-        if verbosity > 0:
-            with capfd.disabled():
-                sys.stdout.write(cap_output)
-                sys.stderr.write(err)
         output = cap_output.split("\n")
         output = [x.strip() for x in output if x != ""]
+        if verbosity > 0:
+            live_output = output
+            summary_lines = []
+            if hasattr(tester, "filter_output"):
+                live_output, suppressed = tester.filter_output(output)
+                if hasattr(tester, "format_suppression_summary"):
+                    summary_lines = tester.format_suppression_summary(suppressed)
+
+            with capfd.disabled():
+                for line in live_output:
+                    sys.stdout.write(line + "\n")
+                for line in summary_lines:
+                    sys.stdout.write(line + "\n")
+                sys.stderr.write(err)
         result = tester.run(output)
         return result
 
