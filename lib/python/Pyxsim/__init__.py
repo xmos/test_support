@@ -99,6 +99,39 @@ def _build(
     return (success, output)
 
 
+def _split_capture_lines(text):
+    return [x.strip() for x in text.split("\n") if x != ""]
+
+
+def _filter_capture_lines(tester, lines):
+    if tester and hasattr(tester, "filter_output"):
+        filtered, suppressed = tester.filter_output(lines)
+        if hasattr(tester, "format_suppression_summary"):
+            return filtered, tester.format_suppression_summary(suppressed)
+        return filtered, []
+    return lines, []
+
+
+def _replay_captured_output(capfd, tester, verbosity):
+    cap_output, err = capfd.readouterr()
+    output = _split_capture_lines(cap_output)
+    err_lines = _split_capture_lines(err)
+
+    if verbosity > 1:
+        live_output, output_summary = _filter_capture_lines(tester, output)
+        live_err, err_summary = _filter_capture_lines(tester, err_lines)
+
+        with capfd.disabled():
+            for line in live_output:
+                sys.stdout.write(line + "\n")
+            for line in output_summary + err_summary:
+                sys.stdout.write(line + "\n")
+            for line in live_err:
+                sys.stderr.write(line + "\n")
+
+    return output
+
+
 def run_on_simulator_(xe, tester=None, simthreads=[], **kwargs):
 
     do_xe_prebuild = kwargs.pop("do_xe_prebuild", False)
@@ -134,30 +167,16 @@ def run_on_simulator_(xe, tester=None, simthreads=[], **kwargs):
     sim_success = run_with_pyxsim(xe, simthreads, **kwargs)
 
     if not sim_success:
+        if capfd:
+            _replay_captured_output(capfd, tester, verbosity)
         return False
 
     if tester and capfd:
-        cap_output, err = capfd.readouterr()
-        output = cap_output.split("\n")
-        output = [x.strip() for x in output if x != ""]
-        if verbosity > 0:
-            live_output = output
-            summary_lines = []
-            if hasattr(tester, "filter_output"):
-                live_output, suppressed = tester.filter_output(output)
-                if hasattr(tester, "format_suppression_summary"):
-                    summary_lines = tester.format_suppression_summary(suppressed)
-
-            with capfd.disabled():
-                for line in live_output:
-                    sys.stdout.write(line + "\n")
-                for line in summary_lines:
-                    sys.stdout.write(line + "\n")
-                sys.stderr.write(err)
+        output = _replay_captured_output(capfd, tester, verbosity)
         result = tester.run(output)
         return result
 
-    if verbosity > 0 and capfd:
+    if verbosity > 1 and capfd:
         cap_output, err = capfd.readouterr()
         with capfd.disabled():
             sys.stdout.write(cap_output)
