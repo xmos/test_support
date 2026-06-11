@@ -126,6 +126,7 @@ class ComparisonTester:
         self.result = True
         self.failures = []
         line_num = -1
+        highlighted_first_mismatch = False
 
         num_expected = len(expected)
 
@@ -140,10 +141,7 @@ class ComparisonTester:
                 # Golden file is shorter than output
                 expected_line = "<no line>"
 
-            if self._verbosity > 1:
-                print(f"{Fore.YELLOW}GOLDEN: {expected_line}{Style.RESET_ALL}")
-            if self._verbosity > 0:
-                print(f"OUTPUT: {line}")
+            line_mismatch = line_num >= num_expected
 
             if line_num >= num_expected:
                 self.record_failure("Length of expected output less than output")
@@ -153,13 +151,14 @@ class ComparisonTester:
                     # In verbose mode keep printing out all of the remaining output to assist with debugging
                     break
 
-            if self._ordered:
+            if self._ordered and not line_mismatch:
                 if regexp:
                     match = re.match(expected_line + "$", line.strip())
                 else:
                     match = expected_line == line.strip()
 
                 if not match:
+                    line_mismatch = True
                     self.record_failure(
                         (
                             "Line %d of output does not match expected\n"
@@ -172,7 +171,7 @@ class ComparisonTester:
                             line.strip(),
                         )
                     )
-            else:  # Unordered testing
+            elif not self._ordered and not line_mismatch:  # Unordered testing
                 stripped = line.strip()
                 if regexp:
                     match = any(re.match(e + "$", stripped) for e in expected)
@@ -180,6 +179,7 @@ class ComparisonTester:
                     match = any(e == stripped for e in expected)
 
                 if not match:
+                    line_mismatch = True
                     self.record_failure(
                         (
                             "Line %d of output not found in expected\n"
@@ -188,6 +188,18 @@ class ComparisonTester:
                         )
                         % (line_num, line.strip())
                     )
+
+            highlight_line = line_mismatch and not highlighted_first_mismatch
+            if highlight_line:
+                highlighted_first_mismatch = True
+
+            if self._verbosity > 1:
+                colour = Fore.RED if highlight_line else Fore.YELLOW
+                print(f"{colour}GOLDEN: {expected_line}{Style.RESET_ALL}")
+            if self._verbosity > 0:
+                colour = Fore.RED if highlight_line else ""
+                reset = Style.RESET_ALL if highlight_line else ""
+                print(f"{colour}OUTPUT: {line}{reset}")
 
         if num_expected > line_num + 1:
             self.record_failure(
