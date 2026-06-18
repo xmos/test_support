@@ -106,35 +106,14 @@ class BusWire:
         """Disable the modeled pull-up bias."""
         self.pullup_enabled = False
 
-    def set_driver(self, driver, mode, context=None):
-        """Set a named driver's hard-drive mode."""
+    def _set_driver(self, driver, mode, context=None):
+        """Internal method to set a named driver's hard-drive mode."""
         if not isinstance(mode, DriveMode):
             mode = DriveMode(mode)
         driver = self._key(driver)
         self._drivers[driver] = mode
         if mode != DriveMode.HIGH_Z:
             self.assert_no_hard_clash(driver=driver, mode=mode, context=context)
-
-    def release(self, driver):
-        """Set a named driver to high-Z."""
-        self.set_driver(driver, DriveMode.HIGH_Z)
-
-    def drive(self, driver, value, context=None):
-        """Set a named driver to hard-drive low or high."""
-        if value not in (0, 1):
-            raise ValueError("BusWire drive value must be 0 or 1")
-        if value == 1:
-            self.drive_high(driver, context=context)
-        else:
-            self.drive_low(driver, context=context)
-
-    def drive_low(self, driver, context=None):
-        """Set a named driver to hard-drive low."""
-        self.set_driver(driver, DriveMode.DRIVE_LOW, context=context)
-
-    def drive_high(self, driver, context=None):
-        """Set a named driver to hard-drive high."""
-        self.set_driver(driver, DriveMode.DRIVE_HIGH, context=context)
 
     def driver_mode(self, driver):
         """Return a named driver's mode, defaulting to high-Z."""
@@ -240,3 +219,92 @@ class BusWire:
             f"pullup={snapshot.pullup_enabled} "
             f"released_value={self.released_value}"
         )
+
+    def _drive(self, driver_name: str, value: int, context=None):
+        """Internal drive method for OO API."""
+        if value not in (0, 1):
+            raise ValueError("BusWire drive value must be 0 or 1")
+        mode = DriveMode.DRIVE_HIGH if value == 1 else DriveMode.DRIVE_LOW
+        self._set_driver(driver_name, mode, context=context)
+
+    def _release(self, driver_name: str):
+        """Internal release method for OO API."""
+        self._set_driver(driver_name, DriveMode.HIGH_Z)
+
+
+class BusWireDriver:
+    """Bound driver handle for a specific driver on a specific wire."""
+
+    def __init__(self, wire: BusWire, driver: 'BusDriver'):
+        self._wire = wire
+        self._driver = driver
+
+    def drive(self, value: int, context=None):
+        """Drive this wire to the specified value (0 or 1)."""
+        self._wire._drive(self._driver.name, value, context=context)
+
+    def release(self):
+        """Release this driver to high-Z."""
+        self._wire._release(self._driver.name)
+
+    def mode(self) -> DriveMode:
+        """Return the current drive mode of this driver."""
+        return self._wire.driver_mode(self._driver.name)
+
+
+class BusDriver:
+    """Named driver that can be bound to multiple wires."""
+
+    def __init__(self, name: str):
+        self.name = name
+        self._wires: dict[str, BusWireDriver] = {}
+
+    def _bind_wire(self, wire: BusWire):
+        """Internal method to bind a wire to this driver."""
+        # Validate wire name is a valid Python identifier
+        if not wire.name.isidentifier():
+            raise ValueError(f"Wire name must be a valid Python identifier: '{wire.name}'")
+        
+        # Check for conflicts with existing BusDriver attributes
+        if hasattr(self, wire.name):
+            raise ValueError(f"Wire name '{wire.name}' conflicts with BusDriver attribute")
+        
+        # Check for duplicate binding
+        if wire.name in self._wires:
+            raise ValueError(f"Driver '{self.name}' is already bound to wire '{wire.name}'")
+        
+        # Create the wire driver handle and bind it as a real attribute
+        wire_driver = BusWireDriver(wire, self)
+        self._wires[wire.name] = wire_driver
+        setattr(self, wire.name, wire_driver)
+
+
+class Bus:
+    """Container that binds drivers to wires and enforces global name uniqueness."""
+
+    def __init__(self, wires: list[BusWire], drivers: list[BusDriver]):
+        # Validate wire name uniqueness first
+        wire_names = [w.name for w in wires]
+        if len(wire_names) != len(set(wire_names)):
+            duplicates = [name for name in wire_names if wire_names.count(name) > 1]
+            raise ValueError(f"Duplicate wire names: {set(duplicates)}")
+
+        # Validate driver name uniqueness
+        driver_names = [d.name for d in drivers]
+        if len(driver_names) != len(set(driver_names)):
+            duplicates = [name for name in driver_names if driver_names.count(name) > 1]
+            raise ValueError(f"Duplicate driver names: {set(duplicates)}")
+
+        # Validate global uniqueness across all wire and driver names
+        all_names = wire_names + driver_names
+        if len(all_names) != len(set(all_names)):
+            duplicates = [name for name in all_names if all_names.count(name) > 1]
+            raise ValueError(f"Duplicate names found (wires and drivers must have globally unique names): {set(duplicates)}")
+
+        self._wires = {w.name: w for w in wires}
+        self._drivers = {d.name: d for d in drivers}
+
+        # Bind all drivers to all wires
+        for driver in drivers:
+            for wire in wires:
+                driver._bind_wire(wire)
