@@ -107,3 +107,11 @@ def test_bus_wire_drive_value_sets_hard_drive_mode():
     wire.drive("controller", 1)
 
     assert wire.driver_mode("controller") == DriveMode.DRIVE_HIGH
+
+
+@pytest.mark.parametrize("value", [-1, 2, 3])
+def test_bus_wire_drive_rejects_non_single_wire_values(value):
+    wire = BusWire("sda")
+
+    with pytest.raises(ValueError, match="0 or 1"):
+        wire.drive("controller", value)

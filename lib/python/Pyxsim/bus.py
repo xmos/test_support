@@ -118,7 +118,9 @@ class BusWire:
 
     def drive(self, driver, value, context=None):
         """Set a named driver to hard-drive low or high."""
-        if value & 0x1:
+        if value not in (0, 1):
+            raise ValueError("BusWire drive value must be 0 or 1")
+        if value == 1:
             self.drive_high(driver, context=context)
         else:
             self.drive_low(driver, context=context)
@@ -194,4 +196,3 @@ class BusWire:
 
     def _key(self, value):
         return value.value if isinstance(value, Enum) else value
-
