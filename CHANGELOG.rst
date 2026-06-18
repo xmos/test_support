@@ -6,6 +6,8 @@ UNRELEASED
 
   * ADDED:     AssertiveComparisonChecker's suppress_multidrive_messages support/param to
     ComparisonChecker
+  * ADDED:     BusWire resolved-wire model for Python testbenches, including pull-up
+    handling and hard-clash detection
   * ADDED:     Methods in Xsi class for getting the xsim tick frequency
   * CHANGED:   Pyxsim CMake build uses XCommon CMake
   * CHANGED:   The way time is incremented by time_step for better floating point precision
