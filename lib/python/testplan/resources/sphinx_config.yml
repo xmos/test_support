@@ -1,0 +1,33 @@
+needs_links:
+  verifies:
+    outgoing: verifies
+    incoming: verified by
+
+needs_types:
+  - directive: test
+    title: Test Case
+    prefix: TC_
+    color: '#BFD8D2'
+    style: node
+  - directive: req
+    title: Requirement
+    prefix: REQ_
+    color: '#FEDCD2'
+    style: node
+
+needs_fields:
+  level:
+    description: Test level
+    schema:
+      type: string
+    nullable: true
+  pytest:
+    description: Pytest implementation mapping
+    schema:
+      type: string
+    nullable: true
+  result:
+    description: Latest test result
+    schema:
+      type: string
+    nullable: true
