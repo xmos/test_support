@@ -5,7 +5,6 @@
 from dataclasses import dataclass
 from enum import Enum
 
-
 class DriveMode(Enum):
     """Hard-drive state for one named driver on a resolved bus wire."""
 
@@ -68,7 +67,7 @@ class BusWire:
     for simulators that only support hard drives.
     """
 
-    def __init__(self, name, mode=BusMode.OPEN_DRAIN, pullup_enabled=True, released_value=None):
+    def __init__(self, name, mode=BusMode.OPEN_DRAIN, pullup_enabled=False, released_value=None, debug=False, debug_changes_only=True):
         if not isinstance(mode, BusMode):
             mode = BusMode(mode)
         if released_value is not None and released_value not in (0, 1):
@@ -78,6 +77,10 @@ class BusWire:
         self.pullup_enabled = bool(pullup_enabled)
         self.released_value = released_value
         self._drivers = {}
+        self._floating_warned = False
+        self.debug = bool(debug)
+        self.debug_changes_only = bool(debug_changes_only)
+        self._last_debug_state = None
 
     def configure(self, mode=None, pullup_enabled=None):
         """Configure protocol mode and pull-up state."""
@@ -137,7 +140,7 @@ class BusWire:
         """Return a named driver's mode, defaulting to high-Z."""
         return self._drivers.get(self._key(driver), DriveMode.HIGH_Z)
 
-    def snapshot(self, exclude=None):
+    def snapshot(self, exclude=None, context=None):
         """Resolve all drivers and return a stable debug snapshot."""
         exclude = self._key(exclude) if exclude is not None else None
         drivers_low = tuple(sorted(
@@ -162,8 +165,14 @@ class BusWire:
             resolved = 1
         else:
             resolved = self.released_value
+            if resolved is None and not self._floating_warned:
+                print(
+                        f"WARNING: Bus wire {self.name} is floating: all drivers are high-Z, "
+                    "pull-up is disabled, and no released_value is configured",
+                )
+                self._floating_warned = True
 
-        return ResolvedLineState(
+        snapshot = ResolvedLineState(
             name=self.name,
             resolved=resolved,
             hard_clash=hard_clash,
@@ -174,9 +183,12 @@ class BusWire:
             pullup_enabled=self.pullup_enabled,
         )
 
-    def resolved_value(self, exclude=None):
+        self._debug_snapshot(snapshot, context=context, exclude=exclude)
+        return snapshot
+
+    def resolved_value(self, exclude=None, context=None):
         """Return the resolved digital value for this line."""
-        return self.snapshot(exclude=exclude).resolved
+        return self.snapshot(exclude=exclude, context=context).resolved
 
     def has_hard_clash(self):
         """Return true if at least one hard-low and one hard-high driver exist."""
@@ -196,3 +208,35 @@ class BusWire:
 
     def _key(self, value):
         return value.value if isinstance(value, Enum) else value
+
+    def _debug_snapshot(self, snapshot, context=None, exclude=None):
+        if not self.debug:
+            return
+
+        state = (
+            snapshot.resolved,
+            snapshot.hard_clash,
+            snapshot.drivers_low,
+            snapshot.drivers_high,
+            snapshot.drivers_high_z,
+            snapshot.mode,
+            snapshot.pullup_enabled,
+            self.released_value,
+            exclude,
+        )
+        if self.debug_changes_only and state == self._last_debug_state:
+            return
+        self._last_debug_state = state
+
+        context_text = f" context={context}" if context is not None else ""
+        print(
+            f"BUSWIRE {self.name}{context_text}: "
+            f"resolved={snapshot.resolved} "
+            f"hard_clash={snapshot.hard_clash} "
+            f"low={snapshot.drivers_low} "
+            f"high={snapshot.drivers_high} "
+            f"high_z={snapshot.drivers_high_z} "
+            f"mode={snapshot.mode.value} "
+            f"pullup={snapshot.pullup_enabled} "
+            f"released_value={self.released_value}"
+        )

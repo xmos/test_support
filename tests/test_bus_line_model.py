@@ -1,7 +1,6 @@
 # Copyright 2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
 import pytest
-
 from Pyxsim.bus import BusWire, BusMode, BusWire, BusWireHardClash, DriveMode
 
 
@@ -91,8 +90,19 @@ def test_bus_wire_release_without_pullup_uses_released_value():
     assert wire.resolved_value() == 0
 
 
+def test_bus_wire_warns_once_when_floating_without_pullup_or_released_value(capsys):
+    wire = BusWire("sda", pullup_enabled=False)
+    wire.release("controller")
+
+    assert wire.resolved_value() is None
+    assert wire.resolved_value() is None
+
+    captured = capsys.readouterr()
+    assert captured.out.count("Bus wire sda is floating") == 1
+
+
 def test_bus_wire_configures_mode_and_pullup():
-    wire = BusWire("sda")
+    wire = BusWire("sda", released_value=0)
 
     wire.configure(mode=BusMode.PUSH_PULL, pullup_enabled=False)
 
