@@ -214,11 +214,25 @@ def run_with_pyxsim(
     plugins=[],
     instTracing=False,
     vcdTracing=False,
+    multiprocessing_start_method=None,
 ):
 
-    # Use 'fork' on Unix-like systems to preserve stdout/stderr capture
-    # Windows continues to use default 'spawn' method
-    if sys.platform != 'win32':
+    # Python 3.12 warns when a multithreaded parent process calls fork(), because
+    # only the calling thread survives in the child and locks held by other
+    # threads can remain permanently locked. Pytest and its capture/plugins may
+    # already have helper threads running by the time Pyxsim starts the simulator
+    # process. On Unix with Python 3.12+, use forkserver so children are forked
+    # from a dedicated single-threaded server instead of the potentially
+    # multithreaded pytest parent. Keep the historical direct-fork default on
+    # older Python versions to avoid imposing forkserver/spawn pickling
+    # requirements where there is no Python 3.12 multithreaded-fork warning to
+    # fix. Windows continues to use the platform default, and callers can pass
+    # multiprocessing_start_method to force a specific method.
+    if multiprocessing_start_method is not None:
+        ctx = multiprocessing.get_context(multiprocessing_start_method)
+    elif sys.platform != 'win32' and sys.version_info >= (3, 12):
+        ctx = multiprocessing.get_context('forkserver')
+    elif sys.platform != 'win32':
         ctx = multiprocessing.get_context('fork')
     else:
         ctx = multiprocessing.get_context()

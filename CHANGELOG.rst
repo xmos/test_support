@@ -24,6 +24,9 @@ UNRELEASED
     failed commands
   * FIXED:     Pyxsim now joins and terminates simulator/subprocess workers on timeout to avoid
     leaking child processes
+  * FIXED:     Pyxsim uses forkserver process startup on Unix with Python 3.12+
+    to avoid multithreaded-fork deprecation warnings in CI while preserving the
+    historical fork default on older Python versions
 
 2.0.0
 -----

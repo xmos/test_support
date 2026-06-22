@@ -1,14 +1,14 @@
 :orphan:
 
-####################################
+#####################################
 test_support: XMOS test support tools
-####################################
+#####################################
 
 :vendor: XMOS
 :scope: General Use
 :description: Python helpers for testing XMOS xCORE applications and libraries
 :category: Testing
-:keywords: test, xsim, pyxsim, pytest, coverage
+:keywords:
 :devices: xcore-200, xcore.ai
 
 *******
