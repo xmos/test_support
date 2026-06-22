@@ -262,21 +262,31 @@ class BusDriver:
     def _bind_wire(self, wire: BusWire):
         """Internal method to bind a wire to this driver."""
         # Validate wire name is a valid Python identifier
-        if not wire.name.isidentifier():
+        if not isinstance(wire.name, str) or not wire.name.isidentifier():
             raise ValueError(f"Wire name must be a valid Python identifier: '{wire.name}'")
-        
-        # Check for conflicts with existing BusDriver attributes
-        if hasattr(self, wire.name):
-            raise ValueError(f"Wire name '{wire.name}' conflicts with BusDriver attribute")
-        
+
         # Check for duplicate binding
         if wire.name in self._wires:
             raise ValueError(f"Driver '{self.name}' is already bound to wire '{wire.name}'")
-        
+
+        # Check for conflicts with existing BusDriver attributes
+        if hasattr(self, wire.name):
+            raise ValueError(f"Wire name '{wire.name}' conflicts with BusDriver attribute")
+
         # Create the wire driver handle and bind it as a real attribute
         wire_driver = BusWireDriver(wire, self)
         self._wires[wire.name] = wire_driver
         setattr(self, wire.name, wire_driver)
+
+
+def _duplicate_names(names):
+    seen = set()
+    duplicates = set()
+    for name in names:
+        if name in seen:
+            duplicates.add(name)
+        seen.add(name)
+    return sorted(duplicates)
 
 
 class Bus:
@@ -285,21 +295,21 @@ class Bus:
     def __init__(self, wires: list[BusWire], drivers: list[BusDriver]):
         # Validate wire name uniqueness first
         wire_names = [w.name for w in wires]
-        if len(wire_names) != len(set(wire_names)):
-            duplicates = [name for name in wire_names if wire_names.count(name) > 1]
-            raise ValueError(f"Duplicate wire names: {set(duplicates)}")
+        duplicate_wire_names = _duplicate_names(wire_names)
+        if duplicate_wire_names:
+            raise ValueError(f"Duplicate wire names: {duplicate_wire_names}")
 
         # Validate driver name uniqueness
         driver_names = [d.name for d in drivers]
-        if len(driver_names) != len(set(driver_names)):
-            duplicates = [name for name in driver_names if driver_names.count(name) > 1]
-            raise ValueError(f"Duplicate driver names: {set(duplicates)}")
+        duplicate_driver_names = _duplicate_names(driver_names)
+        if duplicate_driver_names:
+            raise ValueError(f"Duplicate driver names: {duplicate_driver_names}")
 
         # Validate global uniqueness across all wire and driver names
         all_names = wire_names + driver_names
-        if len(all_names) != len(set(all_names)):
-            duplicates = [name for name in all_names if all_names.count(name) > 1]
-            raise ValueError(f"Duplicate names found (wires and drivers must have globally unique names): {set(duplicates)}")
+        duplicate_names = _duplicate_names(all_names)
+        if duplicate_names:
+            raise ValueError(f"Duplicate names found (wires and drivers must have globally unique names): {duplicate_names}")
 
         self._wires = {w.name: w for w in wires}
         self._drivers = {d.name: d for d in drivers}

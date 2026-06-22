@@ -182,7 +182,7 @@ def test_bus_rejects_duplicate_wire_names():
     sda2 = BusWire("sda")
     controller = BusDriver("controller")
     
-    with pytest.raises(ValueError, match="Duplicate wire names"):
+    with pytest.raises(ValueError, match=r"Duplicate wire names: \['sda'\]"):
         Bus([sda1, sda2], [controller])
 
 
@@ -192,7 +192,7 @@ def test_bus_rejects_duplicate_driver_names():
     controller1 = BusDriver("controller")
     controller2 = BusDriver("controller")
     
-    with pytest.raises(ValueError, match="Duplicate driver names"):
+    with pytest.raises(ValueError, match=r"Duplicate driver names: \['controller'\]"):
         Bus([sda], [controller1, controller2])
 
 
@@ -201,7 +201,7 @@ def test_bus_enforces_global_uniqueness():
     sda = BusWire("sda")
     sda_driver = BusDriver("sda")  # Same name as wire
     
-    with pytest.raises(ValueError, match="globally unique"):
+    with pytest.raises(ValueError, match=r"globally unique names\): \['sda'\]"):
         Bus([sda], [sda_driver])
 
 
@@ -283,6 +283,26 @@ def test_bus_rejects_invalid_wire_name():
     
     with pytest.raises(ValueError, match="must be a valid Python identifier"):
         Bus([sda_invalid], [controller])
+
+
+def test_bus_rejects_non_string_wire_name():
+    """Test that Bus rejects non-string wire names with ValueError."""
+    wire = BusWire(123)
+    controller = BusDriver("controller")
+
+    with pytest.raises(ValueError, match="must be a valid Python identifier"):
+        Bus([wire], [controller])
+
+
+def test_driver_rejects_duplicate_wire_binding():
+    """Test that duplicate wire binding raises the intended error."""
+    wire = BusWire("line")
+    controller = BusDriver("controller")
+
+    controller._bind_wire(wire)
+
+    with pytest.raises(ValueError, match="already bound"):
+        controller._bind_wire(wire)
 
 
 def test_bus_rejects_wire_name_conflicting_with_driver_attribute():
