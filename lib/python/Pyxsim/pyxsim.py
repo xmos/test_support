@@ -208,6 +208,9 @@ class SimThreadImpl(threading.Thread):
         self._xsi.drive_port_pins(tile, p, mask, val)
 
     def sample_port_pins(self, port):
+        # WARNING: XSI port sampling can affect Python-driven port state. If a
+        # caller only wants to observe xcore-driven state, check
+        # is_port_driving() before sampling.
         (tile, p, bit, mask) = parse_port(port)
         val = self._xsi.sample_port_pins(tile, p, mask)
         if bit:
@@ -358,6 +361,8 @@ class Xsi:
         return c_value.value
 
     def sample_port_pins(self, tile, port, mask):
+        # WARNING: xsi_sample_port_pins() is not always a passive observation;
+        # it can disturb Python-driven port state in xsim/XSI interactions.
         c_tile = c_char_p(tile.encode("utf-8"))
         c_port = c_char_p(port.encode("utf-8"))
         c_mask = c_uint(mask)
