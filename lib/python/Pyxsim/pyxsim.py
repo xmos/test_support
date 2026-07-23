@@ -243,52 +243,44 @@ class SimThreadImpl(threading.Thread):
         self.resume_condition = lambda x: False
         self.complete_event.set()
 
-
-class Xsi:
+class XsiBase:
     @staticmethod
     def get_xsi_tick_freq_hz():
         """
         Returns the tick frequency corresponding to the time resolution used in xsim
         """
-        xsi_tick_freq_hz = float(1e15) # Time resolution used within xsim (1 femtosecond)
-        return xsi_tick_freq_hz
+        return float(1e15)  # Time resolution used within xsim (1 femtosecond)
 
     @staticmethod
     def get_xsi_tick_freq_khz():
         """
         Returns the tick frequency used in xsim in KHz
         """
-        return Xsi.get_xsi_tick_freq_hz()/1000.0
+        return XsiBase.get_xsi_tick_freq_hz() / 1000.0
 
     @staticmethod
     def get_xsi_tick_freq_mhz():
         """
         Returns the tick frequency used in xsim in MHz
         """
-        return Xsi.get_xsi_tick_freq_hz()/1000000.0
+        return XsiBase.get_xsi_tick_freq_hz() / 1000000.0
 
     def __init__(self, xe_path=None, simargs=[], appargs=[]):
-        self.xsim = c_void_p()
         self.xe_path = xe_path
-        args = " ".join(['"{}"'.format(x) for x in simargs + [self.xe_path] + appargs])
-        if platform_is_windows():
-            args = args.replace("\\", "/")
-        c_args = c_char_p(args.encode("utf-8"))
-        xsi_lib.xsi_create(byref(self.xsim), c_args)
         self._plugins = []
         self._simthreads = []
         self._time = 0
         self.xe = Xe(self.xe_path)
-        self._time_step = Xsi.get_xsi_tick_freq_mhz() / self.xe.freq  # time-step in fs
+        self._time_step = self.get_xsi_tick_freq_mhz() / self.xe.freq
 
     def register_plugin(self, plugin):
         self._plugins.append(plugin)
 
     def register_simthread(self, fn):
         if isinstance(fn, tuple):
-            xs = list(fn)
-            fn = xs[0]
-            args = xs[1:]
+            simthread_args = list(fn)
+            fn = simthread_args[0]
+            args = simthread_args[1:]
         else:
             args = []
 
@@ -304,9 +296,8 @@ class Xsi:
             raise TestError("Simthread encoutered an exception")
 
     def clock(self):
-        status = xsi_lib.xsi_clock(self.xsim)
-        # time + (time_resolution/xe_freq_hz) = (time*xe_freq_hz + time_resolution)/xe_freq_hz
-        self._time = ((self._time * self.xe.freq) + (Xsi.get_xsi_tick_freq_mhz())) / self.xe.freq
+        status = self._clock()
+        self._time += self._time_step
         if XsiStatus.is_valid(status):
             for plugin in self._plugins:
                 plugin.clock(self)
@@ -329,14 +320,13 @@ class Xsi:
         """
         Returns current time in nanoseconds
         """
-        return (self._time * 1e9) / (Xsi.get_xsi_tick_freq_hz())
+        return (self._time * 1e9) / self.get_xsi_tick_freq_hz()
 
     def get_time_us(self):
         """
         Returns current time in microseconds
         """
-        return (self._time * 1e6) / (Xsi.get_xsi_tick_freq_hz())
-
+        return (self._time * 1e6) / self.get_xsi_tick_freq_hz()
 
     def run(self):
         status = XsiStatus.OK
@@ -347,6 +337,80 @@ class Xsi:
         while status != XsiStatus.DONE:
             status = self.clock()
             XsiStatus.error_if_not_valid(status)
+    
+    def read_symbol_word(self, tile, symbol, offset=0):
+        address = self.xe.symtab[tile, symbol] + offset
+        buf = self.read_mem(tile, address, 4, return_ctype=True)
+        return struct.unpack("<I", buf)
+
+    def read_symbol_byte(self, tile, symbol, offset=0):
+        address = self.xe.symtab[tile, symbol] + offset
+        buf = self.read_mem(tile, address, 1, return_ctype=True)
+        return ord(buf[0])
+    
+    def write_symbol_word(self, tile, symbol, value, offset=0):
+        address = self.xe.symtab[tile, symbol] + offset
+        self.write_mem(tile, address, 4, struct.pack("<I", value))
+
+    def write_symbol_byte(self, tile, symbol, value, offset=0):
+        address = self.xe.symtab[tile, symbol] + offset
+        self.write_mem(tile, address, 1, struct.pack("<c", value))
+
+    def _clock(self):
+        raise NotImplementedError("XsiBase is an abstract class and cannot be instantiated directly")
+
+    def terminate(self):
+        raise NotImplementedError("XsiBase is an abstract class and cannot be instantiated directly")
+
+    def sample_pin(self, package, pin):
+        raise NotImplementedError("XsiBase is an abstract class and cannot be instantiated directly")
+
+    def sample_port_pins(self, tile, port, mask):
+        raise NotImplementedError("XsiBase is an abstract class and cannot be instantiated directly")
+
+    def drive_pin(self, package, pin, value):
+        raise NotImplementedError("XsiBase is an abstract class and cannot be instantiated directly")
+
+    def drive_port_pins(self, tile, port, mask, value):
+        raise NotImplementedError("XsiBase is an abstract class and cannot be instantiated directly")
+
+    def drive_periph_pin(self, periph, pin, mask, value):
+        raise NotImplementedError("XsiBase is an abstract class and cannot be instantiated directly")
+
+    def sample_periph_pin(self, periph, pin, mask):
+        raise NotImplementedError("XsiBase is an abstract class and cannot be instantiated directly")
+
+    def is_pin_driving(self, package, pin):
+        raise NotImplementedError("XsiBase is an abstract class and cannot be instantiated directly")
+
+    def is_port_pins_driving(self, tile, port):
+        raise NotImplementedError("XsiBase is an abstract class and cannot be instantiated directly")
+
+    def read_mem(self, tile, address, num_bytes, return_ctype=False):
+        raise NotImplementedError("XsiBase is an abstract class and cannot be instantiated directly")
+
+    def write_mem(self, tile, address, num_bytes, data):
+        raise NotImplementedError("XsiBase is an abstract class and cannot be instantiated directly")
+
+    def read_pswitch_reg(self, tile, reg_num):
+        raise NotImplementedError("XsiBase is an abstract class and cannot be instantiated directly")
+
+    def write_pswitch_reg(self, tile, reg_num, value):
+        raise NotImplementedError("XsiBase is an abstract class and cannot be instantiated directly")
+
+
+class Xsi(XsiBase):
+    def __init__(self, xe_path=None, simargs=[], appargs=[]):
+        super().__init__(xe_path, simargs, appargs)
+        self.xsim = c_void_p()
+        args = " ".join(['"{}"'.format(x) for x in simargs + [self.xe_path] + appargs])
+        if platform_is_windows():
+            args = args.replace("\\", "/")
+        c_args = c_char_p(args.encode("utf-8"))
+        xsi_lib.xsi_create(byref(self.xsim), c_args)
+
+    def _clock(self):
+        return xsi_lib.xsi_clock(self.xsim)
 
     def terminate(self):
         status = xsi_lib.xsi_terminate(self.xsim)
@@ -440,18 +504,6 @@ class Xsi:
             return buf
         return list(buf)
 
-    def read_symbol_word(self, tile, symbol, offset=0):
-        address = self.xe.symtab[tile, symbol]
-        address += offset
-        buf = self.read_mem(tile, address, 4, return_ctype=True)
-        return struct.unpack("<I", buf)
-
-    def read_symbol_byte(self, tile, symbol, offset=0):
-        address = self.xe.symtab[tile, symbol]
-        address += offset
-        buf = self.read_mem(tile, address, 1, return_ctype=True)
-        return ord(buf[0])
-
     def write_mem(self, tile, address, num_bytes, data):
         c_tile = c_char_p(tile.encode("utf-8"))
         c_address = c_uint(address)
@@ -459,18 +511,6 @@ class Xsi:
         buf = create_string_buffer(data)
         status = xsi_lib.xsi_write_mem(self.xsim, c_tile, c_address, c_num_bytes, buf)
         XsiStatus.error_if_not_valid(status)
-
-    def write_symbol_word(self, tile, symbol, value, offset=0):
-        address = self.xe.symtab[tile, symbol]
-        address += offset
-        data = struct.pack("<I", value)
-        self.write_mem(tile, address, 4, data)
-
-    def write_symbol_byte(self, tile, symbol, value, offset=0):
-        address = self.xe.symtab[tile, symbol]
-        address += offset
-        data = struct.pack("<c", value)
-        self.write_mem(tile, address, 1, data)
 
     def read_pswitch_reg(self, tile, reg_num):
         c_tile = c_char_p(tile.encode("utf-8"))
@@ -489,6 +529,174 @@ class Xsi:
         status = xsi_lib.xsi_write_pswitch_reg(self.xsim, c_tile, c_reg_num, c_value)
         XsiStatus.error_if_not_valid(status)
 
+_xtc_python_lib_path = os.path.abspath(
+    os.path.join(xcc_exec_prefix, "..", "lib/python")
+)
+
+if os.path.exists(os.path.join(_xtc_python_lib_path, "xsi_remote")):
+    sys.path.append(_xtc_python_lib_path)
+    from xsi_remote.xsi_pb2_grpc import XsiStub
+    import xsi_remote.xsi_pb2 as xsi_pb2
+    import grpc
+    from elftools.elf.elffile import ELFFile
+    class XsiRemote(XsiBase):
+        def __init__(self, server_address, xe_path=None, simargs=[], appargs=[]):
+            super().__init__(xe_path, simargs, appargs)
+            self._channel = grpc.insecure_channel(server_address)
+            self._xsi = XsiStub(self._channel)
+            # Start the sim
+            response = self._xsi.Create(xsi_pb2.CreateRequest(arguments=" ".join(simargs)))
+            XsiStatus.error_if_not_valid(response.status)
+            self._instance = response.instance_id
+            if xe_path is not None:
+                self.xe = Xe(xe_path)
+                #TODO: Won't handle goblins, or multiple tiles yet.
+                self._load_elf_for_tile(0, 0)
+                self._load_elf_for_tile(0, 1)
+        
+        def _load_elf_for_tile(self, node, tile):
+            elf_file = self.xe.get_elf_file_for_tile(node, tile)
+            if elf_file is None:
+                raise TestError("Cannot find elf file for node %s tile %s" % (node, tile))
+            with open(elf_file, "rb") as f:
+                elf = ELFFile(f)
+                for segment in elf.iter_segments():
+                    if segment['p_type'] != 'PT_LOAD':
+                        continue
+                    address = segment['p_paddr']
+                    data = segment.data()
+                    self.write_mem(tile, address, len(data), data)
+
+        def _clock(self):
+            request = xsi_pb2.InstanceRequest(instance_id=self._instance)
+            response: xsi_pb2.StatusResponse = self._xsi.Clock(request)
+            return response.status
+
+        def terminate(self):
+            response = self._xsi.Terminate(xsi_pb2.InstanceRequest(self._instance))
+            XsiStatus.error_if_not_valid(response.status)
+            self._channel.close()
+
+        def sample_pin(self, package, pin):
+            request = xsi_pb2.PinRequest(
+                instance_id=self._instance, package=package, pin=pin
+            )
+            response: xsi_pb2.ReadPinResponse = self._xsi.SamplePin(request)
+            XsiStatus.error_if_not_valid(response.status)
+            return response.value
+
+        def sample_port_pins(self, tile, port, mask):
+            # WARNING: xsi_sample_port_pins() is not always a passive observation
+            request = xsi_pb2.SamplePortPinsRequest(
+                instance_id=self._instance,
+                core=tile,
+                port=port,
+                mask=mask
+            )
+            response: xsi_pb2.ReadPortResponse = self._xsi.SamplePortPins(request)
+            XsiStatus.error_if_not_valid(response.status)
+            return response.value
+
+        def drive_pin(self, package, pin, value):
+            request = xsi_pb2.DrivePinRequest(
+                instance_id=self._instance,
+                package=package,
+                pin=pin,
+                value=value
+            )
+            response: xsi_pb2.StatusResponse = self._xsi.DrivePin(request)
+            XsiStatus.error_if_not_valid(response.status)
+
+        def drive_port_pins(self, tile, port, mask, value):
+            request = xsi_pb2.DrivePortPinsRequest(
+                instance_id=self._instance,
+                core=tile,
+                port=port,
+                mask=mask,
+                value=value,
+            )
+            response: xsi_pb2.StatusResponse = self._xsi.DrivePortPins(request)
+            XsiStatus.error_if_not_valid(response.status)
+
+        def drive_periph_pin(self, periph, pin, mask, value):
+            request = xsi_pb2.DrivePeriphPinRequest(
+                instance_id=self._instance,
+                periph=periph,
+                pin=pin,
+                mask=mask,
+                value=value,
+            )
+            response: xsi_pb2.StatusResponse = self._xsi.DrivePeriphPin(request)
+            XsiStatus.error_if_not_valid(response.status)
+
+        def sample_periph_pin(self, periph, pin, mask):
+            request = xsi_pb2.SamplePeriphPinRequest(
+                instance_id=self._instance,
+                periph=periph,
+                pin=pin,
+                mask=mask,
+            )
+            response: xsi_pb2.ReadPortResponse = self._xsi.SamplePeriphPin(request)
+            XsiStatus.error_if_not_valid(response.status)
+            return response.value
+
+        def is_pin_driving(self, package, pin):
+            request = xsi_pb2.PinRequest(
+                instance_id=self._instance, package=package, pin=pin
+            )
+            response: xsi_pb2.ReadPinResponse = self._xsi.IsPinDriving(request)
+            XsiStatus.error_if_not_valid(response.status)
+            return response.value
+
+        def is_port_pins_driving(self, tile, port):
+            request = xsi_pb2.PortRequest(
+                instance_id=self._instance, core=tile, port=port
+            )
+            response: xsi_pb2.ReadPortResponse = self._xsi.IsPortPinsDriving(request)
+            XsiStatus.error_if_not_valid(response.status)
+            return response.value
+
+        def read_mem(self, tile, address, num_bytes, return_ctype=False):
+            request = xsi_pb2.ReadMemRequest(
+                instance_id=self._instance,
+                core=tile,
+                address=address,
+                num_bytes=num_bytes,
+            )
+            response: xsi_pb2.ReadMemResponse = self._xsi.ReadMem(request)
+            XsiStatus.error_if_not_valid(response.status)
+            buf = create_string_buffer(response.data, num_bytes)
+            if return_ctype:
+                return buf
+            return list(buf)
+
+        def write_mem(self, tile, address, num_bytes, data):
+            request = xsi_pb2.WriteMemRequest(
+                instance_id=self._instance,
+                core=tile,
+                address=address,
+                data=bytes(data[:num_bytes]),
+            )
+            response: xsi_pb2.StatusResponse = self._xsi.WriteMem(request)
+            XsiStatus.error_if_not_valid(response.status)
+
+        def read_pswitch_reg(self, tile, reg_num):
+            request = xsi_pb2.ReadSwitchRegRequest(
+                instance_id=self._instance, core=tile, reg_num=reg_num
+            )
+            response: xsi_pb2.ReadRegisterResponse = self._xsi.ReadPSwitchReg(request)
+            XsiStatus.error_if_not_valid(response.status)
+            return response.value
+
+        def write_pswitch_reg(self, tile, reg_num, value):
+            request = xsi_pb2.WriteSwitchRegRequest(
+                instance_id=self._instance,
+                core=tile,
+                reg_num=reg_num,
+                value=value,
+            )
+            response: xsi_pb2.StatusResponse = self._xsi.WritePSwitchReg(request)
+            XsiStatus.error_if_not_valid(response.status)
 
 class XsiPlugin:
     def clock(self, xsi):

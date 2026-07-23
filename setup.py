@@ -15,5 +15,8 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=[
         "colorama>=0.4.6",
+        "grpcio>=1.82.1",
+        "protobuf>=7.35.1",
+        "pyelftools>=0.33",
     ],
 )

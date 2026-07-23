@@ -61,6 +61,26 @@ class Xe:
                     return [(package, pin, bitnum)]
             raise TestError("Cannot find port pins")
         return self._port_map[port]
+    
+    def get_elf_files(self):
+        elf_files = []
+        for root, dirs, files in os.walk(self._tempdir):
+            for f in files:
+                if f.endswith(".elf"):
+                    elf_files.append(os.path.join(root, f))
+        return elf_files
+    
+    def get_elf_file_for_tile(self, node, tile):
+        elf_files = self.get_elf_files()
+        # The elf file for a tile is called image_n0c0.elf where n0 is the node number and c0 is the tile number.
+        # But if there is a image called image_n0c0_2.elf, then that takes priority.
+        elf_file = None
+        for f in elf_files:
+            m = re.match(r".*image_n%sc%s(_\d*)?\.elf" % (node, tile), f)
+            if m:
+                if elf_file is None or m.groups(0)[0] is not None:
+                    elf_file = f
+        return elf_file
 
     def _get_symtab(self):
         stdout, _stderr = call_get_output(["xobjdump", "-t", self.path])
