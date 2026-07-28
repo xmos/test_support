@@ -535,10 +535,10 @@ _xtc_python_lib_path = os.path.abspath(
 
 if os.path.exists(os.path.join(_xtc_python_lib_path, "xsi_remote")):
     sys.path.append(_xtc_python_lib_path)
+    sys.path.append(os.path.join(_xtc_python_lib_path, "xsi_remote"))
     from xsi_remote.xsi_pb2_grpc import XsiStub
     import xsi_remote.xsi_pb2 as xsi_pb2
     import grpc
-    from elftools.elf.elffile import ELFFile
     class XsiRemote(XsiBase):
         def __init__(self, server_address, xe_path=None, simargs=[], appargs=[]):
             super().__init__(xe_path, simargs, appargs)
@@ -548,24 +548,6 @@ if os.path.exists(os.path.join(_xtc_python_lib_path, "xsi_remote")):
             response = self._xsi.Create(xsi_pb2.CreateRequest(arguments=" ".join(simargs)))
             XsiStatus.error_if_not_valid(response.status)
             self._instance = response.instance_id
-            if xe_path is not None:
-                self.xe = Xe(xe_path)
-                #TODO: Won't handle goblins, or multiple tiles yet.
-                self._load_elf_for_tile(0, 0)
-                self._load_elf_for_tile(0, 1)
-        
-        def _load_elf_for_tile(self, node, tile):
-            elf_file = self.xe.get_elf_file_for_tile(node, tile)
-            if elf_file is None:
-                raise TestError("Cannot find elf file for node %s tile %s" % (node, tile))
-            with open(elf_file, "rb") as f:
-                elf = ELFFile(f)
-                for segment in elf.iter_segments():
-                    if segment['p_type'] != 'PT_LOAD':
-                        continue
-                    address = segment['p_paddr']
-                    data = segment.data()
-                    self.write_mem(tile, address, len(data), data)
 
         def _clock(self):
             request = xsi_pb2.InstanceRequest(instance_id=self._instance)
