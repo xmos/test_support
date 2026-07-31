@@ -555,7 +555,7 @@ if os.path.exists(os.path.join(_xtc_python_lib_path, "xsi_remote")):
             return response.status
 
         def terminate(self):
-            response = self._xsi.Terminate(xsi_pb2.InstanceRequest(self._instance))
+            response = self._xsi.Terminate(xsi_pb2.InstanceRequest(instance_id=self._instance))
             XsiStatus.error_if_not_valid(response.status)
             self._channel.close()
 
