@@ -263,6 +263,9 @@ def run_with_pyxsim(
 
         simargs += ["--vcd-tracing", vcd_args]
 
+    if os.environ.get("XSI_ENDPOINT"):
+        timeout = None  # Don't timeout when running on remote server
+
     p = ctx.Process(
         target=do_run_pyxsim, args=(xe_path, simargs, appargs, simthreads, plugins)
     )
