@@ -272,6 +272,15 @@ class XsiBase:
         self._simthreads = []
         self._time = 0
         self.xe = Xe(self.xe_path)
+
+        # Hack - the XE is built in the RTL xregress environment and in this case the XE internals indicate it runs
+        # at 400 MHz tile frequency (it will be executed at 600 MHz)
+        # If we not set self.xe.freq = 600, the python test bench will operate at an incorrect frequency
+        #
+        rtl_xe = os.environ.get("PYTEST_RTL_XE")
+        if rtl_xe:
+            self.xe.freq = 600
+
         self._time_step = self.get_xsi_tick_freq_mhz() / self.xe.freq
 
     def register_plugin(self, plugin):
