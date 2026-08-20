@@ -15,6 +15,7 @@ import struct
 import sys
 import threading
 import traceback
+import weakref
 
 from Pyxsim.xe import Xe
 from Pyxsim.testers import TestError
@@ -540,6 +541,16 @@ if os.path.exists(os.path.join(_xtc_python_lib_path, "xsi_remote")):
     import xsi_remote.xsi_pb2 as xsi_pb2
     import grpc
     class XsiRemote(XsiBase):
+        @staticmethod
+        def _terminate_remote(xsi_stub, channel, instance):
+            try:
+                response = xsi_stub.Terminate(
+                    xsi_pb2.InstanceRequest(instance_id=instance)
+                )
+                XsiStatus.error_if_not_valid(response.status)
+            finally:
+                channel.close()
+
         def __init__(self, server_address, xe_path=None, simargs=[], appargs=[]):
             super().__init__(xe_path, simargs, appargs)
             self._channel = grpc.insecure_channel(server_address)
@@ -548,6 +559,13 @@ if os.path.exists(os.path.join(_xtc_python_lib_path, "xsi_remote")):
             response = self._xsi.Create(xsi_pb2.CreateRequest(arguments=" ".join(simargs)))
             XsiStatus.error_if_not_valid(response.status)
             self._instance = response.instance_id
+            self._finalizer = weakref.finalize(
+                self,
+                self._terminate_remote,
+                self._xsi,
+                self._channel,
+                self._instance,
+            )
 
         def _clock(self):
             request = xsi_pb2.InstanceRequest(instance_id=self._instance)
@@ -555,9 +573,7 @@ if os.path.exists(os.path.join(_xtc_python_lib_path, "xsi_remote")):
             return response.status
 
         def terminate(self):
-            response = self._xsi.Terminate(xsi_pb2.InstanceRequest(instance_id=self._instance))
-            XsiStatus.error_if_not_valid(response.status)
-            self._channel.close()
+            self._finalizer()
 
         def sample_pin(self, package, pin):
             request = xsi_pb2.PinRequest(

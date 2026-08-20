@@ -202,13 +202,15 @@ def do_run_pyxsim(xe, simargs, appargs, simthreads, plugins=None):
         xsi = pyxsim.XsiRemote(xsi_endpoint, xe_path=xe, simargs=simargs, appargs=appargs)
     else:
         xsi = pyxsim.Xsi(xe_path=xe, simargs=simargs, appargs=appargs) 
-    for x in simthreads:
-        xsi.register_simthread(x)
-    if plugins:
-        for plugin in plugins:
-            xsi.register_plugin(plugin)
-    xsi.run()
-    xsi.terminate()
+    try:
+        for x in simthreads:
+            xsi.register_simthread(x)
+        if plugins:
+            for plugin in plugins:
+                xsi.register_plugin(plugin)
+        xsi.run()
+    finally:
+        xsi.terminate()
 
 
 def run_with_pyxsim(
