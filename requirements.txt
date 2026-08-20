@@ -19,6 +19,8 @@
 # same modules should appear in the setup.py list as given below.
 
 colorama==0.4.6
+grpcio==1.82.1
+protobuf==7.35.1
 
 # Development dependencies
 #

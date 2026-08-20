@@ -1,5 +1,6 @@
 # Copyright 2025-2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
+import os
 from pathlib import Path
 
 import Pyxsim
@@ -20,7 +21,11 @@ class ExampleSimThread(Pyxsim.SimThread):
 
 
 def main() -> None:
-    xe = Path(__file__).parent / "bin" / "example_pyxsim.xe"
+    XE_OVERRIDE = os.environ.get("XE_FILE_OVERRIDE")
+    if XE_OVERRIDE:
+        xe = Path(XE_OVERRIDE)
+    else:
+        xe = Path(__file__).parent / "bin" / "example_pyxsim.xe"
     assert xe.exists()
 
     Pyxsim.run_with_pyxsim(
