@@ -271,15 +271,17 @@ class XsiBase:
         self._plugins = []
         self._simthreads = []
         self._time = 0
+
         self.xe = Xe(self.xe_path)
 
-        # For xsim the XSI clock() method "runs" at the same frequency as the tile frequency (600 MHz - extracted from the XE)
-        # For RTL - we need to set self.xe.freq = 1000, the frequency at which the test bench is clocking the XSI interface
-        # (and when the XE is built in the xregress flow, the embedded frequency is 400 MHz)
-        # TODO - pass this frerquency as another env var - for example PYTEST_RTL_XSI_FREQUENCY
-        #
-        rtl_xe = os.environ.get("PYTEST_RTL_XE")
-        if rtl_xe:
+        rtl_xsi = os.environ.get("XSI_ENDPOINT")
+        if rtl_xsi:
+            # For xsim the XSI clock() method "runs" at the same frequency as the tile frequency (600 MHz - extracted from the XE)
+            # For RTL - we need to set self.xe.freq = 1000, the frequency at which the test bench is clocking the XSI interface
+            # (and when the XE is built in the xregress flow, the embedded frequency is 400 MHz)
+            # TODO - pass this frequency on cmd line or as another env var - for example PYTEST_RTL_XSI_FREQUENCY
+            #
+            # Override the frequency "defined" whhen the XE was built
             self.xe.freq = 1000
 
         self._time_step = self.get_xsi_tick_freq_mhz() / self.xe.freq
