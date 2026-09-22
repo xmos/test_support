@@ -196,13 +196,15 @@ def run_on_simulator(*args, **kwargs):
 
 def do_run_pyxsim(xe, simargs, appargs, simthreads, plugins=None):
     xsi = pyxsim.Xsi(xe_path=xe, simargs=simargs, appargs=appargs)
-    for x in simthreads:
-        xsi.register_simthread(x)
-    if plugins:
-        for plugin in plugins:
-            xsi.register_plugin(plugin)
-    xsi.run()
-    xsi.terminate()
+    try:
+        for x in simthreads:
+            xsi.register_simthread(x)
+        if plugins:
+            for plugin in plugins:
+                xsi.register_plugin(plugin)
+        xsi.run()
+    finally:
+        xsi.terminate()
 
 
 def run_with_pyxsim(
@@ -250,10 +252,12 @@ def run_with_pyxsim(
 
         # This is slightly annoying to crate the obj just to grab Node Type..
         xe = Xe(xe_path)
-
-        # Only enable USB tracing for XS3
-        if "XS3" in xe.node_type:
-            vcd_args += " -usb"
+        try:
+            # Only enable USB tracing for XS3
+            if "XS3" in xe.node_type:
+                vcd_args += " -usb"
+        finally:
+            xe.close()
 
         simargs += ["--vcd-tracing", vcd_args]
 
