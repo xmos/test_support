@@ -465,8 +465,11 @@ class Xsi(XsiBase):
         return c_value.value
 
     def terminate(self):
-        status = xsi_lib.xsi_terminate(self.xsim)
-        XsiStatus.error_if_not_valid(status)
+        try:
+            status = xsi_lib.xsi_terminate(self.xsim)
+            XsiStatus.error_if_not_valid(status)
+        finally:
+            self.xe.close()
 
     def sample_pin(self, package, pin):
         c_package = c_char_p(package.encode("utf-8"))

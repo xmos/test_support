@@ -258,10 +258,12 @@ def run_with_pyxsim(
 
         # This is slightly annoying to crate the obj just to grab Node Type..
         xe = Xe(xe_path)
-
-        # Only enable USB tracing for XS3
-        if "XS3" in xe.node_type:
-            vcd_args += " -usb"
+        try:
+            # Only enable USB tracing for XS3
+            if "XS3" in xe.node_type:
+                vcd_args += " -usb"
+        finally:
+            xe.close()
 
         simargs += ["--vcd-tracing", vcd_args]
 
