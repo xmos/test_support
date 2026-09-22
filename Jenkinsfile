@@ -6,23 +6,18 @@ pipeline {
   agent {
     label 'x86_64 && linux'
   }
-  environment {
-    REPO = 'test_support'
-  }
   options {
     skipDefaultCheckout()
   }
   stages {
     stage('Get view') {
       steps {
-        dir(REPO) {
-          checkout scm
-        }
+        checkout scm
       }
     }
     stage('Library checks') {
       steps {
-        runRepoChecks(REPO)
+        runRepoChecks(".")
       }
     }
   }
