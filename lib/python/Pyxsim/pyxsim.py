@@ -241,8 +241,12 @@ class SimThreadImpl(threading.Thread):
             sys.stderr.write("---------Exception in simthread--------------\n")
             traceback.print_exc()
             sys.stderr.write("---------------------------------------------\n")
+
         self.resume_condition = lambda x: False
         self.complete_event.set()
+
+        # Must "Terminate" this thread when driving the RTL simulation - nothing else calls this function so call it here
+        self.terminate()
 
 class XsiBase:
     @staticmethod
@@ -318,6 +322,7 @@ class XsiBase:
                 if simthread.resume_condition(self):
                     simthread.resume_event.set()
                     self.wait_for_simthread(simthread)
+
                     if simthread.terminate_flag:
                         return XsiStatus.DONE
 
