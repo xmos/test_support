@@ -1,4 +1,4 @@
-@Library('xmos_jenkins_shared_library@v0.55.0') _
+@Library('xmos_jenkins_shared_library@v0.33.0') _
 
 getApproval()
 
@@ -8,6 +8,7 @@ pipeline {
   }
   environment {
     REPO = 'test_support'
+    VIEW = getViewName(REPO)
   }
   options {
     skipDefaultCheckout()
@@ -15,16 +16,15 @@ pipeline {
   stages {
     stage('Get view') {
       steps {
-        dir(REPO) {
-          checkout scm
-        }
+        xcorePrepareSandbox("${VIEW}", "${REPO}")
       }
     }
     stage('Library checks') {
       steps {
-        runRepoChecks(REPO)
+        xcoreLibraryChecks("${REPO}")
       }
     }
+    
   }
   post {
     success {
