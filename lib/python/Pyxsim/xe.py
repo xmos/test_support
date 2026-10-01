@@ -92,14 +92,17 @@ class Xe:
             self._get_platform_info()
             self._get_symtab()
         except BaseException:
-            self.close()
+            try:
+                self.close()
+            except Exception:
+                pass
             raise
 
     def close(self):
         tempdir = getattr(self, "_tempdir", None)
-        self._tempdir = None
         if tempdir is not None:
-            shutil.rmtree(tempdir, ignore_errors=True)
+            shutil.rmtree(tempdir)
+            self._tempdir = None
 
     def __del__(self):
         try:
