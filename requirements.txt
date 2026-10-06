@@ -20,6 +20,8 @@
 
 colorama==0.4.6
 
+pytest==8.3.3
+
 # Development dependencies
 #
 # Each link listed below specifies the path to a setup.py file which are
