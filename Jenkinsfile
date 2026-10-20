@@ -25,6 +25,11 @@ pipeline {
         }
       }
     }
+    stage('Doc build') {
+      steps {
+        buildDocs()
+      }
+    }
   }
   post {
     cleanup {
