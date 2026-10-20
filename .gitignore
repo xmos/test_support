@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# xmosdoc files
+doc/_build
+
 # Virtual env and packaging files
 .venv/
 Pipfile.lock
