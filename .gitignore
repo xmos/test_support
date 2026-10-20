@@ -1,3 +1,23 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual env and packaging files
+.venv/
+Pipfile.lock
+*.egg-info/
+
+# Analysis and test files
+.pytest_cache/
+.mypy_cache/
+mypy_*result.xml
+.coverage
+
+# Editor Files
+.vscode
+*.swp
+
 # Prerequisites
 *.d
 

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = 'test_support'
+description = ''
+version = '3.0.0'
+requires-python = ">=3.10"
+dependencies = [
+    'colorama==0.4.6'
+]
+
+[project.optional-dependencies]
+test = [
+    'pytest',
+    'pytest-cov',
+    'pytest-xdist'
+]
+
+[tool.setuptools]
+packages = [
+    'Pyxsim',
+    'xcoverage'
+]
