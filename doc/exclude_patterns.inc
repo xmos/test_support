@@ -4,3 +4,5 @@
 **LICENSE*
 **.venv*
 **.pytest*
+build
+doc/_build
