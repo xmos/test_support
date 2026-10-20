@@ -4,6 +4,7 @@ from math import gcd
 from xml.dom.minidom import parse
 import os
 import re
+import shutil
 import tempfile
 
 from Pyxsim.xmostest_subprocess import call, call_get_output
@@ -80,22 +81,31 @@ class Xe:
                     symtab[current_tile, name] = address
         self.symtab = symtab
 
-    def __init__(self, path):
+    def __init__(self, path, tmp_root=None):
+        self._tempdir = None
         if not os.path.isfile(path):
             raise IOError("Cannot find file: %s" % path)
         self.path = os.path.abspath(path)
         self._symtab = {}
-        self._tempdir = tempfile.mkdtemp()
-        self._get_platform_info()
-        self._get_symtab()
+        self._tempdir = tempfile.mkdtemp(dir=tmp_root)
+        try:
+            self._get_platform_info()
+            self._get_symtab()
+        except BaseException:
+            try:
+                self.close()
+            except Exception:
+                pass
+            raise
+
+    def close(self):
+        tempdir = getattr(self, "_tempdir", None)
+        if tempdir is not None:
+            shutil.rmtree(tempdir)
+            self._tempdir = None
 
     def __del__(self):
-        if self._tempdir is not None:
-            for root, dirs, files in os.walk(self._tempdir, topdown=False):
-                for f in files:
-                    p = os.path.join(root, f)
-                    os.remove(p)
-                for d in dirs:
-                    p = os.path.join(root, d)
-                    os.rmdir(p)
-            os.rmdir(self._tempdir)
+        try:
+            self.close()
+        except Exception:
+            pass
