@@ -24,7 +24,15 @@ pipeline {
         xcoreLibraryChecks("${REPO}")
       }
     }
-    
+    stage('Python Tests') {
+      steps {
+        viewEnv() {
+          withVenv() {
+            runPytest()
+          }
+        }
+      }
+    }
   }
   post {
     success {
