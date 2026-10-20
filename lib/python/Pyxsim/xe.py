@@ -81,13 +81,13 @@ class Xe:
                     symtab[current_tile, name] = address
         self.symtab = symtab
 
-    def __init__(self, path):
+    def __init__(self, path, tmp_root=None):
         self._tempdir = None
         if not os.path.isfile(path):
             raise IOError("Cannot find file: %s" % path)
         self.path = os.path.abspath(path)
         self._symtab = {}
-        self._tempdir = tempfile.mkdtemp()
+        self._tempdir = tempfile.mkdtemp(dir=tmp_root)
         try:
             self._get_platform_info()
             self._get_symtab()
