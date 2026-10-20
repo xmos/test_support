@@ -21,7 +21,7 @@ pipeline {
     }
     stage('Library checks') {
       steps {
-        xcoreLibraryChecks("${REPO}")
+        runRepoChecks("${REPO}")
       }
     }
     stage('Python Tests') {
