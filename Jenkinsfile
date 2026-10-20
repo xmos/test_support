@@ -16,6 +16,11 @@ pipeline {
         createVenv(reqFile: 'requirements.txt')
       }
     }
+    stage('Doc build') {
+      steps {
+        buildDocs()
+      }
+    }
     stage('Python Tests') {
       steps {
         withTools(params.TOOLS_VERSION) {
@@ -23,11 +28,6 @@ pipeline {
             runPytest()
           }
         }
-      }
-    }
-    stage('Doc build') {
-      steps {
-        buildDocs()
       }
     }
   }
