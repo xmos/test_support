@@ -275,14 +275,14 @@ class XsiBase:
         """
         return XsiBase.get_xsi_tick_freq_hz() / 1000000.0
 
-    def __init__(self, xe_path=None, simargs=[], appargs=[]):
+    def __init__(self, xe_path=None, simargs=[], appargs=[], tmp_root=None):
         self.xe_path = xe_path
         self._plugins = []
         self._simthreads = []
         self._terminated_by_simthread = False
         self._time = 0
 
-        self.xe = Xe(self.xe_path)
+        self.xe = Xe(self.xe_path, tmp_root=tmp_root)
 
         # This environment variable is set when running in the RTL "xregress" test environment
         rtl_xsi = os.environ.get("XSI_ENDPOINT")
@@ -440,8 +440,8 @@ class XsiBase:
 
 
 class Xsi(XsiBase):
-    def __init__(self, xe_path=None, simargs=[], appargs=[]):
-        super().__init__(xe_path, simargs, appargs)
+    def __init__(self, xe_path=None, simargs=[], appargs=[], tmp_root=None):
+        super().__init__(xe_path, simargs, appargs, tmp_root=tmp_root)
         self.xsim = c_void_p()
         args = " ".join(['"{}"'.format(x) for x in simargs + [self.xe_path] + appargs])
         if platform_is_windows():
@@ -605,8 +605,8 @@ if os.path.exists(os.path.join(_xtc_python_lib_path, "xsi_remote")):
             finally:
                 channel.close()
 
-        def __init__(self, server_address, xe_path=None, simargs=[], appargs=[]):
-            super().__init__(xe_path, simargs, appargs)
+        def __init__(self, server_address, xe_path=None, simargs=[], appargs=[], tmp_root=None):
+            super().__init__(xe_path, simargs, appargs, tmp_root=tmp_root)
             self._channel = grpc.insecure_channel(server_address)
             self._xsi = XsiStub(self._channel)
             # Start the sim
