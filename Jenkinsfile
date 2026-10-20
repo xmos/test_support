@@ -1,4 +1,4 @@
-@Library('xmos_jenkins_shared_library@v0.33.0') _
+@Library('xmos_jenkins_shared_library@v0.55.0') _
 
 getApproval()
 
@@ -6,30 +6,32 @@ pipeline {
   agent {
     label 'x86_64 && linux'
   }
-  environment {
-    REPO = 'test_support'
-    VIEW = getViewName(REPO)
-  }
   options {
     skipDefaultCheckout()
   }
   stages {
     stage('Get view') {
       steps {
-        xcorePrepareSandbox("${VIEW}", "${REPO}")
+        checkout scm
+        createVenv(reqFile: 'requirements.txt')
       }
     }
-    stage('Library checks') {
+    stage('Doc build') {
       steps {
-        xcoreLibraryChecks("${REPO}")
+        buildDocs()
       }
     }
-    
+    stage('Python Tests') {
+      steps {
+        withTools(params.TOOLS_VERSION) {
+          withVenv() {
+            runPytest()
+          }
+        }
+      }
+    }
   }
   post {
-    success {
-      updateViewfiles()
-    }
     cleanup {
       cleanWs()
     }
