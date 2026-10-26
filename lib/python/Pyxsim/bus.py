@@ -5,6 +5,7 @@
 from dataclasses import dataclass
 from enum import Enum
 
+
 class DriveMode(Enum):
     """Hard-drive state for one named driver on a resolved bus wire."""
 
@@ -76,11 +77,20 @@ class BusWire:
         self.mode = mode
         self.pullup_enabled = bool(pullup_enabled)
         self.released_value = released_value
-        self._drivers = {}
+        self._drivers = []
         self._floating_warned = False
         self.debug = bool(debug)
         self.debug_changes_only = bool(debug_changes_only)
         self._last_debug_state = None
+
+    def add_driver(self, driver, context=None):
+        """Add a named driver to the bus wire."""
+        if not isinstance(driver, BusWireDriver):
+            raise TypeError("driver must be an instance of BusWireDriver")
+        self._drivers.append(driver)
+        if driver.mode() != DriveMode.HIGH_Z:
+            self.assert_no_hard_clash(driver=driver.name(), mode=driver.mode(), context=context)
+        return
 
     def configure(self, mode=None, pullup_enabled=None):
         """Configure protocol mode and pull-up state."""
@@ -106,33 +116,20 @@ class BusWire:
         """Disable the modeled pull-up bias."""
         self.pullup_enabled = False
 
-    def _set_driver(self, driver, mode, context=None):
-        """Internal method to set a named driver's hard-drive mode."""
-        if not isinstance(mode, DriveMode):
-            mode = DriveMode(mode)
-        driver = self._key(driver)
-        self._drivers[driver] = mode
-        if mode != DriveMode.HIGH_Z:
-            self.assert_no_hard_clash(driver=driver, mode=mode, context=context)
-
-    def driver_mode(self, driver):
-        """Return a named driver's mode, defaulting to high-Z."""
-        return self._drivers.get(self._key(driver), DriveMode.HIGH_Z)
-
     def snapshot(self, exclude=None, context=None):
         """Resolve all drivers and return a stable debug snapshot."""
         exclude = self._key(exclude) if exclude is not None else None
         drivers_low = tuple(sorted(
-            driver for driver, mode in self._drivers.items()
-            if driver != exclude and mode == DriveMode.DRIVE_LOW
+            driver.name() for driver in self._drivers
+            if driver.name() != exclude and driver.mode() == DriveMode.DRIVE_LOW
         ))
         drivers_high = tuple(sorted(
-            driver for driver, mode in self._drivers.items()
-            if driver != exclude and mode == DriveMode.DRIVE_HIGH
+            driver.name() for driver in self._drivers
+            if driver.name() != exclude and driver.mode() == DriveMode.DRIVE_HIGH
         ))
         drivers_high_z = tuple(sorted(
-            driver for driver, mode in self._drivers.items()
-            if driver != exclude and mode == DriveMode.HIGH_Z
+            driver.name() for driver in self._drivers
+            if driver.name() != exclude and driver.mode() == DriveMode.HIGH_Z
         ))
 
         hard_clash = bool(drivers_low and drivers_high)
@@ -146,7 +143,7 @@ class BusWire:
             resolved = self.released_value
             if resolved is None and not self._floating_warned:
                 print(
-                        f"WARNING: Bus wire {self.name} is floating: all drivers are high-Z, "
+                    f"WARNING: Bus wire {self.name} is floating: all drivers are high-Z, "
                     "pull-up is disabled, and no released_value is configured",
                 )
                 self._floating_warned = True
@@ -220,17 +217,6 @@ class BusWire:
             f"released_value={self.released_value}"
         )
 
-    def _drive(self, driver_name: str, value: int, context=None):
-        """Internal drive method for OO API."""
-        if value not in (0, 1):
-            raise ValueError("BusWire drive value must be 0 or 1")
-        mode = DriveMode.DRIVE_HIGH if value == 1 else DriveMode.DRIVE_LOW
-        self._set_driver(driver_name, mode, context=context)
-
-    def _release(self, driver_name: str):
-        """Internal release method for OO API."""
-        self._set_driver(driver_name, DriveMode.HIGH_Z)
-
 
 class BusWireDriver:
     """Bound driver handle for a specific driver on a specific wire."""
@@ -238,18 +224,33 @@ class BusWireDriver:
     def __init__(self, wire: BusWire, driver: 'BusDriver'):
         self._wire = wire
         self._driver = driver
+        self._mode = DriveMode.HIGH_Z
+
+    def _set_driver(self, mode, context=None):
+        """Internal method to set a named driver's hard-drive mode."""
+        if not isinstance(mode, DriveMode):
+            mode = DriveMode(mode)
+        self._mode = mode
+        if mode != DriveMode.HIGH_Z:
+            self._wire.assert_no_hard_clash(driver=self._driver.name, mode=mode, context=context)
 
     def drive(self, value: int, context=None):
         """Drive this wire to the specified value (0 or 1)."""
-        self._wire._drive(self._driver.name, value, context=context)
+        if value not in (0, 1):
+            raise ValueError("BusWireDriver drive value must be 0 or 1")
+        mode = DriveMode.DRIVE_HIGH if value == 1 else DriveMode.DRIVE_LOW
+        self._set_driver(mode, context=context)
 
     def release(self):
         """Release this driver to high-Z."""
-        self._wire._release(self._driver.name)
+        self._set_driver(DriveMode.HIGH_Z)
 
     def mode(self) -> DriveMode:
         """Return the current drive mode of this driver."""
-        return self._wire.driver_mode(self._driver.name)
+        return self._mode
+
+    def name(self):
+        return self._driver.name
 
 
 class BusDriver:
@@ -275,6 +276,7 @@ class BusDriver:
 
         # Create the wire driver handle and bind it as a real attribute
         wire_driver = BusWireDriver(wire, self)
+        wire.add_driver(wire_driver)
         self._wires[wire.name] = wire_driver
         setattr(self, wire.name, wire_driver)
 
@@ -309,7 +311,8 @@ class Bus:
         all_names = wire_names + driver_names
         duplicate_names = _duplicate_names(all_names)
         if duplicate_names:
-            raise ValueError(f"Duplicate names found (wires and drivers must have globally unique names): {duplicate_names}")
+            raise ValueError(
+                f"Duplicate names found (wires and drivers must have globally unique names): {duplicate_names}")
 
         self._wires = {w.name: w for w in wires}
         self._drivers = {d.name: d for d in drivers}
