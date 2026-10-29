@@ -695,6 +695,11 @@ if os.path.exists(os.path.join(_xtc_python_lib_path, "xsi_remote")):
             )
             response: xsi_pb2.StatusResponse = self._xsi.WritePSwitchReg(request)
             XsiStatus.error_if_not_valid(response.status)
+else:
+    class XsiRemote(XsiBase):
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError("XsiRemote is not available with this installation of XTC Tools.")
+
 
 class XsiPlugin:
     def clock(self, xsi):
