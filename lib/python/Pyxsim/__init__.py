@@ -17,6 +17,7 @@ from Pyxsim.xmostest_subprocess import call_get_output
 from . import pyxsim
 from Pyxsim.xe import Xe
 from Pyxsim.pyxsim import Xsi
+from Pyxsim.pyxsim import XsiRemote
 
 
 # This function is called automatically by the runners
@@ -195,14 +196,21 @@ def run_on_simulator(*args, **kwargs):
 
 
 def do_run_pyxsim(xe, simargs, appargs, simthreads, plugins=None):
-    xsi = pyxsim.Xsi(xe_path=xe, simargs=simargs, appargs=appargs)
-    for x in simthreads:
-        xsi.register_simthread(x)
-    if plugins:
-        for plugin in plugins:
-            xsi.register_plugin(plugin)
-    xsi.run()
-    xsi.terminate()
+    # Get XSI_ENDPOINT environment variable if set, otherwise use local
+    xsi_endpoint = os.environ.get("XSI_ENDPOINT")
+    if xsi_endpoint:
+        xsi = pyxsim.XsiRemote(xsi_endpoint, xe_path=xe, simargs=simargs, appargs=appargs)
+    else:
+        xsi = pyxsim.Xsi(xe_path=xe, simargs=simargs, appargs=appargs) 
+    try:
+        for x in simthreads:
+            xsi.register_simthread(x)
+        if plugins:
+            for plugin in plugins:
+                xsi.register_plugin(plugin)
+        xsi.run()
+    finally:
+        xsi.terminate()
 
 
 def run_with_pyxsim(
@@ -256,6 +264,9 @@ def run_with_pyxsim(
             vcd_args += " -usb"
 
         simargs += ["--vcd-tracing", vcd_args]
+
+    if os.environ.get("XSI_ENDPOINT"):
+        timeout = None  # Don't timeout when running on remote server
 
     p = ctx.Process(
         target=do_run_pyxsim, args=(xe_path, simargs, appargs, simthreads, plugins)
