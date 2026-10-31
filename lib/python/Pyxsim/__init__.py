@@ -9,8 +9,10 @@ libraries.
 import multiprocessing
 import os
 import re
+import shutil
 import sys
 import subprocess
+import tempfile
 from pathlib import Path
 
 from Pyxsim.xmostest_subprocess import call_get_output
@@ -194,15 +196,17 @@ def run_on_simulator(*args, **kwargs):
     return result
 
 
-def do_run_pyxsim(xe, simargs, appargs, simthreads, plugins=None):
-    xsi = pyxsim.Xsi(xe_path=xe, simargs=simargs, appargs=appargs)
-    for x in simthreads:
-        xsi.register_simthread(x)
-    if plugins:
-        for plugin in plugins:
-            xsi.register_plugin(plugin)
-    xsi.run()
-    xsi.terminate()
+def do_run_pyxsim(xe, simargs, appargs, simthreads, plugins=None, tmp_root=None):
+    xsi = pyxsim.Xsi(xe_path=xe, simargs=simargs, appargs=appargs, tmp_root=tmp_root)
+    try:
+        for x in simthreads:
+            xsi.register_simthread(x)
+        if plugins:
+            for plugin in plugins:
+                xsi.register_plugin(plugin)
+        xsi.run()
+    finally:
+        xsi.terminate()
 
 
 def run_with_pyxsim(
@@ -250,32 +254,44 @@ def run_with_pyxsim(
 
         # This is slightly annoying to crate the obj just to grab Node Type..
         xe = Xe(xe_path)
-
-        # Only enable USB tracing for XS3
-        if "XS3" in xe.node_type:
-            vcd_args += " -usb"
+        try:
+            # Only enable USB tracing for XS3
+            if "XS3" in xe.node_type:
+                vcd_args += " -usb"
+        finally:
+            xe.close()
 
         simargs += ["--vcd-tracing", vcd_args]
 
-    p = ctx.Process(
-        target=do_run_pyxsim, args=(xe_path, simargs, appargs, simthreads, plugins)
-    )
-    p.start()
-    p.join(timeout=timeout)
-    if p.is_alive():
-        sys.stderr.write("Simulator timed out\n")
-        p.terminate()
-        p.join(timeout=1)
-        if p.is_alive() and hasattr(p, "kill"):
-            p.kill()
-            p.join()
-        return False
+    # The parent owns the worker's temp files so they are removed even if the
+    # worker is terminated/killed or crashes without running its own cleanup.
+    tmp_root = tempfile.mkdtemp(prefix="pyxsim_")
+    try:
+        p = ctx.Process(
+            target=do_run_pyxsim,
+            args=(xe_path, simargs, appargs, simthreads, plugins, tmp_root),
+        )
+        p.start()
+        p.join(timeout=timeout)
+        if p.is_alive():
+            sys.stderr.write("Simulator timed out\n")
+            p.terminate()
+            p.join(timeout=1)
+            if p.is_alive() and hasattr(p, "kill"):
+                p.kill()
+                p.join()
+            return False
 
-    if p.exitcode != 0:
-        sys.stderr.write(f"Simulator process failed with exit code {p.exitcode}\n")
-        return False
+        if p.exitcode != 0:
+            sys.stderr.write(f"Simulator process failed with exit code {p.exitcode}\n")
+            return False
 
-    return True
+        return True
+    finally:
+        try:
+            shutil.rmtree(tmp_root)
+        except OSError as e:
+            sys.stderr.write(f"Warning: failed to remove {tmp_root}: {e}\n")
 
 
 class SimThread:

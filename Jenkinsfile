@@ -1,4 +1,4 @@
-@Library('xmos_jenkins_shared_library@v0.33.0') _
+@Library('xmos_jenkins_shared_library@v0.55.0') _
 
 getApproval()
 
@@ -21,10 +21,18 @@ pipeline {
     }
     stage('Library checks') {
       steps {
-        xcoreLibraryChecks("${REPO}")
+        runRepoChecks("${REPO}")
       }
     }
-    
+    stage('Python Tests') {
+      steps {
+        viewEnv() {
+          withVenv() {
+            runPytest()
+          }
+        }
+      }
+    }
   }
   post {
     success {
