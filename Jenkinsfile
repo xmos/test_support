@@ -6,27 +6,24 @@ pipeline {
   agent {
     label 'x86_64 && linux'
   }
-  environment {
-    REPO = 'test_support'
-    VIEW = getViewName(REPO)
-  }
   options {
     skipDefaultCheckout()
   }
   stages {
     stage('Get view') {
       steps {
-        xcorePrepareSandbox("${VIEW}", "${REPO}")
+        checkout scm
+        createVenv(reqFile: 'requirements.txt')
       }
     }
-    stage('Library checks') {
+    stage('Doc build') {
       steps {
-        runRepoChecks("${REPO}")
+        buildDocs()
       }
     }
     stage('Python Tests') {
       steps {
-        viewEnv() {
+        withTools(params.TOOLS_VERSION) {
           withVenv() {
             runPytest()
           }
@@ -35,9 +32,6 @@ pipeline {
     }
   }
   post {
-    success {
-      updateViewfiles()
-    }
     cleanup {
       cleanWs()
     }

@@ -1,9 +1,10 @@
 test_support Change Log
 =======================
 
-UNRELEASED
-----------
+3.0.0
+-----
 
+  * CHANGED:   Turned into a plain python package instead of a lib
   * ADDED:     AssertiveComparisonChecker's suppress_multidrive_messages support/param to
     ComparisonChecker
   * ADDED:     BusWire resolved-wire model for Python testbenches, including pull-up

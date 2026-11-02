@@ -1,0 +1,14 @@
+# This file relates to internal XMOS infrastructure and should be ignored by external users
+---
+project: test_support
+title: '{{project}}: Python test support library'
+version: 3.0.0
+
+documentation:
+  root_doc: doc/rst/test_support.rst
+  exclude_patterns_path: doc/exclude_patterns.inc
+  pdfs:
+    doc/rst/test_support.rst:
+      pdf_title: '{{title}}'
+      pdf_filename: '{{project}}_v{{version}}'
+      pdf_short: yes
