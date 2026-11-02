@@ -267,7 +267,7 @@ class Xsi:
         """
         return Xsi.get_xsi_tick_freq_hz()/1000000.0
 
-    def __init__(self, xe_path=None, simargs=[], appargs=[]):
+    def __init__(self, xe_path=None, simargs=[], appargs=[], tmp_root=None):
         self.xsim = c_void_p()
         self.xe_path = xe_path
         args = " ".join(['"{}"'.format(x) for x in simargs + [self.xe_path] + appargs])
@@ -278,7 +278,7 @@ class Xsi:
         self._plugins = []
         self._simthreads = []
         self._time = 0
-        self.xe = Xe(self.xe_path)
+        self.xe = Xe(self.xe_path, tmp_root=tmp_root)
         self._time_step = Xsi.get_xsi_tick_freq_mhz() / self.xe.freq  # time-step in fs
 
     def register_plugin(self, plugin):
@@ -366,8 +366,11 @@ class Xsi:
             raise TestError(f"Simulation returned non-zero result: {result}")
 
     def terminate(self):
-        status = xsi_lib.xsi_terminate(self.xsim)
-        XsiStatus.error_if_not_valid(status)
+        try:
+            status = xsi_lib.xsi_terminate(self.xsim)
+            XsiStatus.error_if_not_valid(status)
+        finally:
+            self.xe.close()
 
     def sample_pin(self, package, pin):
         c_package = c_char_p(package.encode("utf-8"))
