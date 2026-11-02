@@ -277,6 +277,7 @@ class Xsi:
         xsi_lib.xsi_create(byref(self.xsim), c_args)
         self._plugins = []
         self._simthreads = []
+        self._terminated_by_simthread = False
         self._time = 0
         self.xe = Xe(self.xe_path)
         self._time_step = Xsi.get_xsi_tick_freq_mhz() / self.xe.freq  # time-step in fs
@@ -315,6 +316,7 @@ class Xsi:
                     simthread.resume_event.set()
                     self.wait_for_simthread(simthread)
                     if simthread.terminate_flag:
+                        self._terminated_by_simthread = status != XsiStatus.DONE
                         return XsiStatus.DONE
 
         return status
@@ -360,6 +362,9 @@ class Xsi:
         while status != XsiStatus.DONE:
             status = self.clock()
             XsiStatus.error_if_not_valid(status)
+
+        if self._terminated_by_simthread:
+            return
 
         result = self.get_result()
         if result != 0:
