@@ -10,8 +10,7 @@ requires-python = ">=3.10"
 dependencies = [
     'colorama==0.4.6',
     'grpcio==1.82.1',
-    'protobuf==7.35.1',
-    'PyYAML==6.0.2'
+    'protobuf==7.35.1'
 ]
 
 [project.optional-dependencies]
@@ -25,12 +24,5 @@ test = [
 packages = [
     'Pyxsim',
     'testplan',
-    'testplan.resources',
     'xcoverage'
-]
-
-[tool.setuptools.package-data]
-testplan = [
-    'resources/*.css',
-    'resources/*.yml'
 ]
