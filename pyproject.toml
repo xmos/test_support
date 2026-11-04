@@ -23,5 +23,6 @@ test = [
 [tool.setuptools]
 packages = [
     'Pyxsim',
+    'testplan',
     'xcoverage'
 ]
