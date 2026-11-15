@@ -439,11 +439,20 @@ class XsiBase:
         raise NotImplementedError("XsiBase is an abstract class and cannot be instantiated directly")
 
 
+def _simulator_arguments(simargs, xe_path, appargs):
+    """The simulator's argument list. Application arguments are only passed on
+    after --args, which must come directly before the executable."""
+    simargs = list(simargs)
+    if appargs and (not simargs or simargs[-1] != "--args"):
+        simargs.append("--args")
+    return simargs + [xe_path] + list(appargs)
+
+
 class Xsi(XsiBase):
     def __init__(self, xe_path=None, simargs=[], appargs=[], tmp_root=None):
         super().__init__(xe_path, simargs, appargs, tmp_root=tmp_root)
         self.xsim = c_void_p()
-        args = " ".join(['"{}"'.format(x) for x in simargs + [self.xe_path] + appargs])
+        args = " ".join(['"{}"'.format(x) for x in _simulator_arguments(simargs, self.xe_path, appargs)])
         if platform_is_windows():
             args = args.replace("\\", "/")
         c_args = c_char_p(args.encode("utf-8"))
