@@ -25,6 +25,8 @@ test_support Change Log
     failed commands
   * FIXED:     Pyxsim now joins and terminates simulator/subprocess workers on timeout to avoid
     leaking child processes
+  * FIXED:     Pyxsim checks the xsim exit result after the simulation ends, so an
+    application that asserts or exits non-zero is reported as a failure
 
 2.0.0
 -----

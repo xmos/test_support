@@ -336,16 +336,10 @@ class XsiBase:
 
     def get_result(self):
         """
-        Returns the simulation result from xsim (exit code or exception type)
-        This is a newer method so may not exist on older versions of the library
+        Returns the simulation result (exit code or exception type); 0 means success.
+        Backends that cannot query the result return 0.
         """
-        if not hasattr(xsi_lib, "xsi_get_result"):
-            return 0
-
-        c_value = c_uint()
-        status = xsi_lib.xsi_get_result(self.xsim, byref(c_value))
-        XsiStatus.error_if_not_valid(status)
-        return c_value.value
+        return 0
 
     def get_time(self):
         """
@@ -374,7 +368,11 @@ class XsiBase:
         while status != XsiStatus.DONE:
             status = self.clock()
             XsiStatus.error_if_not_valid(status)
-    
+
+        result = self.get_result()
+        if result != 0:
+            raise TestError(f"Simulation returned non-zero result: {result}")
+
     def read_symbol_word(self, tile, symbol, offset=0):
         address = self.xe.symtab[tile, symbol] + offset
         buf = self.read_mem(tile, address, 4, return_ctype=True)
@@ -449,9 +447,17 @@ class Xsi(XsiBase):
     def _clock(self):
         return xsi_lib.xsi_clock(self.xsim)
 
-        result = self.get_result()
-        if result != 0:
-            raise TestError(f"Simulation returned non-zero result: {result}")
+    def get_result(self):
+        """
+        Returns the simulation result from xsim (exit code or exception type).
+        Older XTC tools lack xsi_get_result; treat that as success.
+        """
+        if not hasattr(xsi_lib, "xsi_get_result"):
+            return 0
+        c_value = c_uint()
+        status = xsi_lib.xsi_get_result(self.xsim, byref(c_value))
+        XsiStatus.error_if_not_valid(status)
+        return c_value.value
 
     def terminate(self):
         status = xsi_lib.xsi_terminate(self.xsim)
