@@ -8,7 +8,7 @@ test_support: XMOS test support tools
 :scope: General Use
 :description: Python helpers for testing XMOS xCORE applications and libraries
 :category: Testing
-:keywords: test, xsim, pyxsim, pytest, coverage
+:keywords: test, xsim, pyxsim, pytest, coverage, testplan
 :devices: xcore-200, xcore.ai
 
 *******
@@ -18,7 +18,8 @@ Summary
 ``test_support`` provides shared Python infrastructure for XMOS simulation and
 testbench code. It includes helpers for running xsim from pytest, interacting
 with simulated ports and pins, comparing simulator output, reading XE metadata,
-and modelling resolved bus wires in Python testbenches.
+modelling resolved bus wires in Python testbenches, and generating structured
+test-plan result documentation.
 
 ********
 Features
@@ -30,6 +31,8 @@ Features
 * Resolved wire model for buses with multiple named drivers.
 * Python access helpers for XE files.
 * Python code coverage support for xsim traces.
+* Pytest test-plan helpers for central parametrization and generated result
+  summaries.
 
 ************
 Known issues
@@ -55,6 +58,7 @@ Required libraries (dependencies)
 *********************************
 
 * ``colorama``
+* ``PyYAML``
 
 ********
 Examples

@@ -318,3 +318,13 @@ VCD/instruction tracing
 VCD and instruction tracing are enabled by default in ``example_pyxsim.py``.
 The data is captured in the ``logs`` directory, and can be viewed with
 a waveform viewer such as ``gtkwave``.
+
+****************
+Additional tools
+****************
+
+.. toctree::
+   :maxdepth: 2
+
+   code_coverage
+   testplan

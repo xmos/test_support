@@ -10,6 +10,8 @@ test_support Change Log
   * ADDED:     BusWire resolved-wire model for Python testbenches, including pull-up
     handling and hard-clash detection
   * ADDED:     Methods in Xsi class for getting the xsim tick frequency
+  * ADDED:     Reusable testplan pytest marker for writing requirement traceability
+    to standard JUnit XML reports consumed by xmosdoc
   * CHANGED:   Pyxsim CMake build uses XCommon CMake
   * CHANGED:   The way time is incremented by time_step for better floating point precision
   * CHANGED:   ComparisonChecker only prints expected output when verbosity is 2 or higher (i.e.
