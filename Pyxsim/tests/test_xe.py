@@ -1,3 +1,4 @@
+"""XE metadata and worker temporary-file cleanup, including timeout and crash paths."""
 import os
 import signal
 import sys
@@ -12,6 +13,7 @@ from Pyxsim.xe import Xe
 
 
 def test_close_removes_temporary_directory(tmp_path):
+    """Explicit close removes metadata files and remains safe when called again."""
     tempdir = tmp_path / "xe"
     tempdir.mkdir()
     (tempdir / "config.xml").touch()
@@ -26,6 +28,7 @@ def test_close_removes_temporary_directory(tmp_path):
 
 
 def test_init_failure_removes_temporary_directory(tmp_path, monkeypatch):
+    """Metadata extraction failures do not leak a partially constructed XE's temp files."""
     def raise_xobjdump_error(_xe):
         raise RuntimeError("xobjdump failed")
 
@@ -66,6 +69,7 @@ class _CrashingXsi(_FakeXsi):
 @pytest.mark.skipif(sys.platform == "win32", reason="relies on fork start method")
 @pytest.mark.parametrize("xsi_class", [_HangingXsi, _CrashingXsi])
 def test_run_with_pyxsim_removes_worker_temp_files(tmp_path, monkeypatch, xsi_class):
+    """The parent removes worker metadata even after a timeout or SIGKILL crash."""
     binary = tmp_path / "test.xe"
     binary.touch()
     system_tmp = tmp_path / "tmp"

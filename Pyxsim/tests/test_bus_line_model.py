@@ -1,10 +1,12 @@
 # Copyright 2026 XMOS LIMITED.
 # This Software is subject to the terms of the XMOS Public Licence: Version 1.
+"""Resolved bus-wire values, clashes, driver bindings and configuration validation."""
 import pytest
 from Pyxsim.bus import Bus, BusDriver, BusWire, BusMode, BusWireHardClash, DriveMode
 
 
 def test_bus_wire_all_released_resolves_to_released_value():
+    """A fully released wire resolves to its configured idle value without a clash."""
     sda = BusWire("sda", released_value=1)
     controller = BusDriver("controller")
     target = BusDriver("target")
@@ -21,6 +23,7 @@ def test_bus_wire_all_released_resolves_to_released_value():
 
 
 def test_bus_wire_hard_low_beats_released():
+    """An active low driver overrides a released peer and is named in the snapshot."""
     sda = BusWire("sda")
     controller = BusDriver("controller")
     target = BusDriver("target")
@@ -37,6 +40,7 @@ def test_bus_wire_hard_low_beats_released():
 
 
 def test_bus_wire_hard_high_beats_released():
+    """An active high driver overrides a released peer without reporting a clash."""
     sda = BusWire("sda")
     controller = BusDriver("controller")
     target = BusDriver("target")
@@ -52,6 +56,7 @@ def test_bus_wire_hard_high_beats_released():
 
 
 def test_bus_wire_multiple_low_drivers_do_not_clash():
+    """Multiple drivers agreeing on low resolve safely and are all reported."""
     sda = BusWire("sda")
     controller = BusDriver("controller")
     target = BusDriver("target")
@@ -67,6 +72,7 @@ def test_bus_wire_multiple_low_drivers_do_not_clash():
 
 
 def test_bus_wire_low_and_high_drivers_clash():
+    """Opposing hard drives raise a clash containing both drivers' snapshot state."""
     sda = BusWire("sda")
     controller = BusDriver("controller")
     target = BusDriver("target")
@@ -85,6 +91,7 @@ def test_bus_wire_low_and_high_drivers_clash():
 
 
 def test_bus_wire_release_with_pullup_resolves_high():
+    """A released open-drain wire resolves high when its pull-up is enabled."""
     sda = BusWire("sda", mode=BusMode.OPEN_DRAIN, pullup_enabled=True)
     controller = BusDriver("controller")
     target = BusDriver("target")
@@ -100,6 +107,7 @@ def test_bus_wire_release_with_pullup_resolves_high():
 
 
 def test_bus_wire_release_without_pullup_uses_released_value():
+    """A wire without a pull-up uses the explicitly configured released value."""
     sda = BusWire("sda", pullup_enabled=False, released_value=0)
     controller = BusDriver("controller")
     Bus([sda], [controller])
@@ -110,6 +118,7 @@ def test_bus_wire_release_without_pullup_uses_released_value():
 
 
 def test_bus_wire_warns_once_when_floating_without_pullup_or_released_value(capsys):
+    """An unconfigured floating wire resolves to None and emits only one warning."""
     sda = BusWire("sda", pullup_enabled=False)
     controller = BusDriver("controller")
     Bus([sda], [controller])
@@ -124,6 +133,7 @@ def test_bus_wire_warns_once_when_floating_without_pullup_or_released_value(caps
 
 
 def test_bus_wire_configures_mode_and_pullup():
+    """Runtime mode and pull-up changes are reflected by the wire snapshot."""
     sda = BusWire("sda", released_value=0)
     controller = BusDriver("controller")
     Bus([sda], [controller])
@@ -136,6 +146,7 @@ def test_bus_wire_configures_mode_and_pullup():
 
 
 def test_bus_wire_drive_value_sets_hard_drive_mode():
+    """Driving one selects the hard-high drive mode for that driver."""
     sda = BusWire("sda")
     controller = BusDriver("controller")
     Bus([sda], [controller])
@@ -147,6 +158,7 @@ def test_bus_wire_drive_value_sets_hard_drive_mode():
 
 @pytest.mark.parametrize("value", [-1, 2, 3])
 def test_bus_wire_drive_rejects_non_single_wire_values(value):
+    """Single-wire drivers reject every tested value other than zero or one."""
     sda = BusWire("sda")
     controller = BusDriver("controller")
     Bus([sda], [controller])
